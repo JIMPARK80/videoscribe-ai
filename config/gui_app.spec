@@ -9,11 +9,14 @@ torch_data = collect_data_files('torch')
 torchaudio_data = collect_data_files('torchaudio')
 
 a = Analysis(
-    ['gui_app.py'],
+    ['../gui_app.py'],
     pathex=[],
-    binaries=[],
+    binaries=[
+        ('../bin/ffmpeg.exe', 'bin'),
+    ],
     datas=[
-        ('Youtube_text.ico', '.'),
+        ('../assets/Youtube_text.ico', 'assets'),
+        ('../bin/ffmpeg.exe', 'bin'),
     ] + whisper_data + torch_data + torchaudio_data,
     hiddenimports=[
         'whisper',
@@ -23,6 +26,7 @@ a = Analysis(
         'moviepy.editor',
         'moviepy.video.io.VideoFileClip',
         'moviepy.audio.io.AudioFileClip',
+        'moviepy.config',
         'yt_dlp',
         'tkinter',
         'tkinter.ttk',
@@ -74,7 +78,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='Youtube_text.ico',
+    icon='../assets/Youtube_text.ico',
 )
 
 coll = COLLECT(

@@ -2,10 +2,10 @@
 maxUploadSize = 2048
 
 [theme]
-primaryColor = "#FF00FF"
-backgroundColor = "#000000"
-secondaryBackgroundColor = "#1A1A1A"
-textColor = "#00FF00"
+primaryColor = "#00D4FF"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1E1E1E"
+textColor = "#FFFFFF"
 
 [browser]
 gatherUsageStats = false

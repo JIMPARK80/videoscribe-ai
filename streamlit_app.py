@@ -4,6 +4,13 @@ import os
 import torch
 import whisper
 
+# 모듈 임포트
+from src.ffmpeg_setup import setup_ffmpeg_path
+from src.converter import VideoToTextConverter
+
+# FFmpeg 경로 설정 실행
+setup_ffmpeg_path()
+
 # 환경 감지 / Environment Detection
 def get_environment_config():
     """환경에 따른 설정 반환 / Return config based on environment"""
@@ -120,10 +127,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 캐시된 모델 로딩 / Load Cached Model
+# 캐시된 변환기 로딩 / Load Cached Converter
 @st.cache_resource
-def load_whisper_model(model_name):
-    return whisper.load_model(model_name)
+def load_video_converter(model_name, use_gpu=True):
+    return VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
 
 # 사이드바 설정 / Sidebar Configuration  
 with st.sidebar:
@@ -277,26 +284,26 @@ if uploaded_file is not None:
                 tmp_file.write(uploaded_file.read())
                 temp_file_path = tmp_file.name
             
-            # Whisper 모델 로딩 / Load Whisper Model
+            # 변환기 로딩 / Load Converter
             status_text.text(f"🤖 Loading {selected_model} model... / {selected_model} 모델 로딩 중...")
             progress_bar.progress(30)
             
-            model = load_whisper_model(selected_model)
+            use_gpu = torch.cuda.is_available()
+            converter = load_video_converter(selected_model, use_gpu)
             
             # 텍스트 변환 / Text Conversion
             status_text.text("🔄 Converting speech to text... / 음성을 텍스트로 변환 중...")
             progress_bar.progress(70)
             
-            # Whisper 옵션 설정 / Whisper Options
-            transcribe_options = {
-                "task": "transcribe",
-                "verbose": False
-            }
+            # 언어 설정
+            language = None if selected_language == "auto" else selected_language
             
-            if selected_language != "auto":
-                transcribe_options["language"] = selected_language
-            
-            result = model.transcribe(temp_file_path, **transcribe_options)
+            # 변환 실행
+            result = converter.process_local_video_with_info(
+                temp_file_path, 
+                language=language, 
+                save_transcript=False
+            )
             
             # 완료 / Complete
             progress_bar.progress(100)
@@ -308,7 +315,7 @@ if uploaded_file is not None:
             # 변환된 텍스트 / Converted Text
             st.subheader("📝 Transcribed Text / 변환된 텍스트")
             
-            transcript_text = result["text"].strip()
+            transcript_text = result.get("transcript", "").strip()
             
             if transcript_text:
                 # 텍스트 영역 / Text Area
@@ -322,7 +329,7 @@ if uploaded_file is not None:
                 # 통계 정보 / Statistics
                 word_count = len(edited_text.split())
                 char_count = len(edited_text)
-                detected_lang = result.get("language", "unknown")
+                detected_lang = result.get("detected_language", "unknown")
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
