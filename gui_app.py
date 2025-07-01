@@ -2,13 +2,35 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import threading
 import os
+import sys
 from video_to_text import VideoToTextConverter
+
+# PyInstaller 경로 문제 해결
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class VideoToTextGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Video File to Text Extractor / 비디오 파일 텍스트 추출기")
         self.root.geometry("800x600")
+        
+        # Window icon
+        try:
+            icon_path = get_resource_path("Youtube_text.ico")
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+                print(f"Icon loaded: {icon_path}")
+            else:
+                print(f"Icon not found: {icon_path}")
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
         
         # Initialize converter (will be loaded when needed)
         self.converter = None
@@ -253,8 +275,15 @@ class VideoToTextGUI:
                 model_display = self.model_var.get()
                 model_name = model_display.split(" (")[0] if " (" in model_display else model_display
                 use_gpu = self.use_gpu_var.get()
-                self.converter = VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
-                self.root.after(0, lambda: self.update_progress(25, "AI model loaded AI 모델 로딩 완료"))
+                
+                # Safe model loading for PyInstaller builds
+                try:
+                    self.converter = VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
+                    self.root.after(0, lambda: self.update_progress(25, "AI model loaded AI 모델 로딩 완료"))
+                except Exception as e:
+                    error_msg = f"Failed to load AI model: {str(e)}\nAI 모델 로딩 실패: {str(e)}"
+                    self.root.after(0, lambda: self.show_error(error_msg))
+                    return
             
             # Step 3: Extract audio (25-40%)
             self.root.after(0, lambda: self.update_progress(30, "Extracting audio... 오디오 추출중..."))

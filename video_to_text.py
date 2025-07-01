@@ -3,13 +3,21 @@ import sys
 import subprocess
 import tempfile
 import whisper
-import yt_dlp
 from moviepy.editor import VideoFileClip
 from pathlib import Path
 import argparse
 import shutil
 import logging
 import warnings
+import io
+
+# Optional yt_dlp import (YouTube 기능용)
+try:
+    import yt_dlp
+    YT_DLP_AVAILABLE = True
+except ImportError:
+    YT_DLP_AVAILABLE = False
+    print("yt_dlp not available - YouTube functionality disabled")
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -17,6 +25,70 @@ logger = logging.getLogger(__name__)
 
 # Whisper FP16 경고 숨기기
 warnings.filterwarnings("ignore", message="FP16 is not supported on CPU; using FP32 instead")
+
+# PyInstaller 경로 문제 해결
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# FFmpeg 경로 설정 (포터블 배포용)
+def setup_ffmpeg_path():
+    """Setup FFmpeg path for portable distribution"""
+    # 1순위: 실행파일과 같은 폴더의 ffmpeg.exe
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller 빌드 환경 - 번들된 ffmpeg 찾기
+        bundled_ffmpeg = os.path.join(sys._MEIPASS, 'ffmpeg.exe')
+        if os.path.exists(bundled_ffmpeg):
+            os.environ['FFMPEG_BINARY'] = bundled_ffmpeg
+            print(f"✅ Using bundled FFmpeg: {bundled_ffmpeg}")
+            return
+    
+    # 개발 환경 또는 번들 실패 시 - 현재 폴더의 ffmpeg.exe
+    local_ffmpeg = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ffmpeg.exe')
+    if os.path.exists(local_ffmpeg):
+        os.environ['FFMPEG_BINARY'] = local_ffmpeg
+        print(f"✅ Using local FFmpeg: {local_ffmpeg}")
+        return
+    
+    # 실행파일과 같은 폴더의 ffmpeg.exe (빌드된 실행파일용)
+    if hasattr(sys, 'executable'):
+        exe_dir = os.path.dirname(sys.executable)
+        portable_ffmpeg = os.path.join(exe_dir, 'ffmpeg.exe')
+        if os.path.exists(portable_ffmpeg):
+            os.environ['FFMPEG_BINARY'] = portable_ffmpeg
+            print(f"✅ Using portable FFmpeg: {portable_ffmpeg}")
+            return
+    
+    # 2순위: 시스템 PATH에서 찾기
+    import shutil
+    system_ffmpeg = shutil.which('ffmpeg')
+    if system_ffmpeg:
+        os.environ['FFMPEG_BINARY'] = system_ffmpeg
+        print(f"✅ Using system FFmpeg: {system_ffmpeg}")
+        return
+    
+    # FFmpeg를 찾을 수 없음
+    print("❌ Warning: FFmpeg not found! Video processing may fail.")
+    print("❌ 경고: FFmpeg를 찾을 수 없습니다! 영상 처리가 실패할 수 있습니다.")
+    print("💡 Tip: Place ffmpeg.exe in the same folder as this program")
+    print("💡 팁: 이 프로그램과 같은 폴더에 ffmpeg.exe를 넣어주세요")
+
+# 안전한 임시 디렉토리 생성
+def create_safe_temp_dir():
+    """Create a safe temporary directory that works in PyInstaller builds"""
+    try:
+        return tempfile.mkdtemp(prefix='video_to_text_')
+    except Exception as e:
+        # 대안 임시 디렉토리
+        import uuid
+        temp_dir = os.path.join(os.path.expanduser('~'), 'temp_video_' + str(uuid.uuid4())[:8])
+        os.makedirs(temp_dir, exist_ok=True)
+        return temp_dir
 
 class VideoToTextConverter:
     def __init__(self, model_size="base", use_gpu=True):
@@ -27,6 +99,9 @@ class VideoToTextConverter:
             model_size (str): Whisper model size ('tiny', 'base', 'small', 'medium', 'large')
             use_gpu (bool): Whether to use GPU if available
         """
+        # PyInstaller 환경 설정
+        setup_ffmpeg_path()
+        
         import torch
         
         # Check GPU availability
@@ -43,7 +118,28 @@ class VideoToTextConverter:
         
         print("Loading Whisper model... 로딩중...")
         try:
-            self.model = whisper.load_model(model_size, device=self.device)
+            # PyInstaller 빌드에서 stdout/stderr 문제 해결
+            import sys
+            import io
+            
+            # 원본 stdout/stderr 저장
+            original_stdout = sys.stdout
+            original_stderr = sys.stderr
+            
+            # PyInstaller 환경에서는 진행률 표시를 위한 더미 스트림 생성
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller 빌드 환경
+                dummy_stream = io.StringIO()
+                sys.stdout = dummy_stream
+                sys.stderr = dummy_stream
+            
+            try:
+                self.model = whisper.load_model(model_size, device=self.device)
+            finally:
+                # stdout/stderr 복원
+                sys.stdout = original_stdout
+                sys.stderr = original_stderr
+            
             print(f"Whisper {model_size} model loaded successfully on {self.device.upper()}!")
             print(f"Whisper {model_size} 모델이 {self.device.upper()}에서 로딩 완료!")
         except Exception as e:
@@ -91,8 +187,13 @@ class VideoToTextConverter:
         Returns:
             tuple: (audio_file_path, title) or (None, None) if failed
         """
+        if not YT_DLP_AVAILABLE:
+            print("Error: yt_dlp not available. Cannot download YouTube videos.")
+            print("오류: yt_dlp를 사용할 수 없습니다. YouTube 영상을 다운로드할 수 없습니다.")
+            return None, None
+        
         if output_path is None:
-            output_path = tempfile.mkdtemp()
+            output_path = create_safe_temp_dir()
         
         # Configure yt-dlp options
         ydl_opts = {
@@ -167,7 +268,7 @@ class VideoToTextConverter:
             str: Path to the extracted audio file or None if failed
         """
         if output_path is None:
-            output_path = tempfile.mkdtemp()
+            output_path = create_safe_temp_dir()
         
         try:
             print(f"Extracting audio from: {video_path}")
@@ -309,7 +410,7 @@ class VideoToTextConverter:
         Returns:
             str: Transcribed text or None if failed
         """
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = create_safe_temp_dir()
         
         try:
             # Download audio
@@ -367,7 +468,7 @@ class VideoToTextConverter:
         Returns:
             str: Transcribed text or None if failed
         """
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = create_safe_temp_dir()
         
         try:
             # Extract audio
@@ -424,7 +525,7 @@ class VideoToTextConverter:
         Returns:
             dict: Detailed result with transcript, detected language, etc.
         """
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = create_safe_temp_dir()
         
         try:
             # Extract audio (progress: 40-60%)
