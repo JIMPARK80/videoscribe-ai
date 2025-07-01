@@ -95,17 +95,30 @@ class VideoToTextGUI:
         self.progress_var = tk.StringVar(value="0%")
         ttk.Label(progress_frame, textvariable=self.progress_var, width=8).grid(row=0, column=1)
         
-        # Status label
+        # Progress details text area
+        progress_details_frame = ttk.LabelFrame(main_frame, text="Progress Details / 진행 상황", padding="5")
+        progress_details_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
+        progress_details_frame.columnconfigure(0, weight=1)
+        
+        # Progress steps display - reduced height for single step
+        self.progress_text = tk.Text(progress_details_frame, height=3, wrap=tk.WORD, 
+                                   state='disabled', font=("Arial", 10, "bold"))
+        self.progress_text.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=5, pady=5)
+        
+        # Initialize progress text
+        self.update_progress_text("Ready to start processing / 처리 시작 준비됨")
+        
+        # Status label (simplified)
         self.status_var = tk.StringVar(value="Ready / 준비됨")
         status_label = ttk.Label(main_frame, textvariable=self.status_var)
-        status_label.grid(row=5, column=0, columnspan=3)
+        status_label.grid(row=6, column=0, columnspan=3)
         
         # Results section
         results_frame = ttk.LabelFrame(main_frame, text="Results / 결과", padding="10")
-        results_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        results_frame.grid(row=7, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(1, weight=1)
-        main_frame.rowconfigure(6, weight=1)
+        main_frame.rowconfigure(7, weight=1)
         
         # Video info frame
         info_frame = ttk.Frame(results_frame)
@@ -167,6 +180,8 @@ class VideoToTextGUI:
         # Reset and start progress
         self.progress['value'] = 0
         self.progress_var.set("0%")
+        self.clear_progress_text()
+        self.update_progress_text("🚀 Starting video processing / 영상 처리 시작")
         
         # Disable process button and start progress
         self.process_btn.config(state="disabled")
@@ -178,11 +193,42 @@ class VideoToTextGUI:
         thread.daemon = True
         thread.start()
     
+    def update_progress_text(self, message):
+        """Update progress details text area - show only current step"""
+        self.progress_text.config(state='normal')
+        self.progress_text.delete(1.0, tk.END)  # Clear previous content
+        self.progress_text.insert(1.0, f"• {message}")
+        self.progress_text.config(state='disabled')
+    
+    def clear_progress_text(self):
+        """Clear progress details text area"""
+        self.progress_text.config(state='normal')
+        self.progress_text.delete(1.0, tk.END)
+        self.progress_text.config(state='disabled')
+    
     def update_progress(self, value, status):
         """Update progress bar and status"""
         self.progress['value'] = value
         self.progress_var.set(f"{value}%")
         self.status_var.set(status)
+        
+        # Add detailed progress steps - show current step only
+        progress_steps = {
+            5: " Step 1/6: Reading video information\ 영상 정보 읽는중...",
+            10: " Step 1/6: Video info loaded ✅\ 영상 정보 로딩 완료",
+            15: " Step 2/6: Loading AI model\ AI 모델 로딩중...",
+            25: " Step 2/6: AI model loaded ✅\ AI 모델 로딩 완료", 
+            30: " Step 3/6: Preparing audio extraction\ 오디오 추출 준비중...",
+            40: " Step 4/6: Extracting audio from video\ 비디오에서 오디오 추출중...",
+            60: " Step 4/6: Audio extraction completed ✅\ 오디오 추출 완료",
+            65: " Step 5/6: Starting AI transcription\ AI 텍스트 변환 시작...",
+            85: " Step 5/6: Transcription completed ✅\ 텍스트 변환 완료",
+            90: " Step 6/6: Finalizing results\ 결과 정리중...",
+            100: "🎉 Step 6/6: All completed! ✅\ 모든 단계 완료!"
+        }
+        
+        if value in progress_steps:
+            self.update_progress_text(progress_steps[value])
     
     def process_video(self, file_path):
         try:
@@ -277,6 +323,7 @@ class VideoToTextGUI:
         self.progress_var.set("0%")
         self.process_btn.config(state="normal")
         self.status_var.set("Error / 오류")
+        self.update_progress_text("❌ Error occurred / 오류 발생")
         
         messagebox.showerror("Error / 오류", error_msg)
     
