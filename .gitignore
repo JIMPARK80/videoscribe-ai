@@ -1,0 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+myenv/
+venv/
+env/
+ENV/
+.venv
+.env
+
+# Whisper Models (큰 파일들)
+*.pt
+*.pth
+models/
+
+# 임시 파일들 / Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# 출력 파일들 / Output files
+*_transcript.txt
+*_transcript_detailed.txt
+*.wav
+*.mp3
+*.m4a
+*.webm
+
+# 비디오 파일들 (예제 제외) / Video files (except examples)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+# 단, example_videos 폴더가 있다면 포함
+!example_videos/
+
+# IDE 설정들 / IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 생성 파일들 / OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+
+# 로그 파일들 / Log files
+*.log
+logs/
+
+# 설정 파일들 (개인정보 포함 가능) / Config files with potential personal info
+config.json
+settings.json
+
+# FFmpeg (시스템 설치된 것 사용)
+ffmpeg/
+ffmpeg.exe 
