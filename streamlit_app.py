@@ -4,6 +4,114 @@ import os
 import torch
 import whisper
 
+# 환경 감지 / Environment Detection
+def get_environment_config():
+    """환경에 따른 설정 반환 / Return config based on environment"""
+    # 다양한 클라우드 환경 감지 방법
+    cloud_indicators = [
+        os.getenv('STREAMLIT_SHARING_MODE'),  # Streamlit Cloud
+        'streamlit.app' in os.getenv('SERVER_NAME', ''),  # Streamlit Cloud
+        os.getenv('CODESPACE_NAME'),  # GitHub Codespaces
+        os.getenv('GITPOD_WORKSPACE_ID'),  # Gitpod
+        os.getenv('RAILWAY_ENVIRONMENT'),  # Railway
+        'herokuapp.com' in os.getenv('SERVER_NAME', ''),  # Heroku
+        os.path.exists('/app'),  # Docker container
+        not os.path.exists('D:\\'),  # Windows 로컬 드라이브 없음
+    ]
+    
+    if any(cloud_indicators):
+        return {
+            "max_file_size_mb": 200,
+            "max_file_display": "200MB",
+            "environment": "☁️ Cloud Environment"
+        }
+    else:
+        return {
+            "max_file_size_mb": 2048,  # 2GB
+            "max_file_display": "2GB", 
+            "environment": "🏠 Local Environment"
+        }
+
+# 현재 테마 감지 함수 / Current Theme Detection Function
+def get_current_theme():
+    """현재 설정된 테마를 반환합니다 / Return current theme setting"""
+    config_path = ".streamlit/config.toml"
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # 배경색으로 테마 판단
+                if 'backgroundColor = "#FFFFFF"' in content:
+                    return "light"
+                elif 'backgroundColor = "#0E1117"' in content:
+                    return "dark"
+        return "light"  # 기본값
+    except:
+        return "light"
+
+# 테마 설정 함수 / Theme Configuration Function
+def update_theme_config(theme_type):
+    """테마 설정을 업데이트합니다 / Update theme configuration"""
+    config_path = ".streamlit/config.toml"
+    
+    # 테마별 설정
+    themes = {
+        "light": {
+            "primaryColor": "#FF6B6B",
+            "backgroundColor": "#FFFFFF", 
+            "secondaryBackgroundColor": "#F0F2F6",
+            "textColor": "#262730"
+        },
+        "dark": {
+            "primaryColor": "#00D4FF",  # 시원한 파란색
+            "backgroundColor": "#0E1117",  # 깊은 다크
+            "secondaryBackgroundColor": "#1E1E1E",  # 더 진한 회색
+            "textColor": "#FFFFFF"  # 순백색 텍스트
+        },
+        "midnight": {
+            "primaryColor": "#4ECDC4",  # 민트 그린
+            "backgroundColor": "#1A1A2E",  # 미드나이트 블루
+            "secondaryBackgroundColor": "#16213E",  # 더 진한 미드나이트
+            "textColor": "#E0E0E0"  # 부드러운 흰색
+        },
+        "neon": {
+            "primaryColor": "#FF00FF",  # 마젠타 네온
+            "backgroundColor": "#000000",  # 순수 검정
+            "secondaryBackgroundColor": "#1A1A1A",  # 짙은 회색
+            "textColor": "#00FF00"  # 네온 그린 텍스트
+        }
+    }
+    
+    try:
+        # config.toml 파일 생성/업데이트
+        config_content = f"""[server]
+maxUploadSize = 2048
+
+[theme]
+primaryColor = "{themes[theme_type]['primaryColor']}"
+backgroundColor = "{themes[theme_type]['backgroundColor']}"
+secondaryBackgroundColor = "{themes[theme_type]['secondaryBackgroundColor']}"
+textColor = "{themes[theme_type]['textColor']}"
+
+[browser]
+gatherUsageStats = false
+"""
+        
+        # 디렉토리 생성 (없는 경우)
+        os.makedirs(".streamlit", exist_ok=True)
+        
+        # 파일 쓰기
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(config_content)
+            
+        return True
+    except Exception as e:
+        st.error(f"❌ Theme update failed: {e}")
+        return False
+
+# 환경 설정 로드
+ENV_CONFIG = get_environment_config()
+
 # 페이지 설정 / Page Configuration
 st.set_page_config(
     page_title="🎬 Video to Text Converter",
@@ -20,6 +128,62 @@ def load_whisper_model(model_name):
 # 사이드바 설정 / Sidebar Configuration  
 with st.sidebar:
     st.title("⚙️ Settings / 설정")
+    
+    # 환경 정보 표시
+    st.info(f"🌍 Environment: {ENV_CONFIG['environment']}")
+    st.info(f"📁 Max File Size: {ENV_CONFIG['max_file_display']}")
+    
+    # 로컬 환경에서만 테마 선택 표시
+    if ENV_CONFIG['environment'] == "🏠 Local Environment":
+        st.markdown("---")
+        theme_options = {
+            "light": "☀️ Light Theme / 라이트 테마",
+            "dark": "🌙 Dark Theme / 다크 테마",
+            "midnight": "🌌 Midnight Blue / 미드나이트 블루",
+            "neon": "⚡ Neon Dark / 네온 다크"
+        }
+        
+        # 세션 상태로 현재 테마 관리
+        if 'current_theme' not in st.session_state:
+            st.session_state.current_theme = get_current_theme()
+        
+        selected_theme = st.selectbox(
+            "🎨 Theme / 테마:",
+            options=list(theme_options.keys()),
+            format_func=lambda x: theme_options[x],
+            index=list(theme_options.keys()).index(st.session_state.current_theme) if st.session_state.current_theme in theme_options else 0,
+            help="Select theme and click apply / 테마를 선택하고 적용 버튼을 클릭하세요"
+        )
+        
+        # 현재 테마와 다른 경우에만 버튼 표시
+        if selected_theme != st.session_state.current_theme:
+            if st.button("🔄 Apply Theme / 테마 적용", 
+                        type="primary",
+                        help="Apply selected theme immediately / 선택한 테마를 즉시 적용"):
+                # 테마 적용 및 즉시 새로고침
+                if update_theme_config(selected_theme):
+                    st.session_state.current_theme = selected_theme
+                    st.success(f"✅ Theme applied! Refreshing... / 테마 적용 완료! 새로고침 중...")
+                    
+                    # 즉시 재실행
+                    try:
+                        st.rerun()
+                    except (AttributeError, NameError):
+                        try:
+                            st.experimental_rerun()
+                        except (AttributeError, NameError):
+                            # 최후 수단: JavaScript 새로고침 + 효과
+                            st.balloons()
+                            st.markdown("""
+                            <script>
+                            setTimeout(() => {
+                                window.parent.location.reload();
+                            }, 1000);
+                            </script>
+                            """, unsafe_allow_html=True)
+        else:
+            st.success(f"✅ Current theme: {theme_options[st.session_state.current_theme]}")
+            st.info("💡 Select a different theme to apply changes / 다른 테마를 선택하여 변경하세요")
     
     # 모델 선택 / Model Selection
     model_options = {
@@ -54,23 +218,34 @@ with st.sidebar:
     if torch.cuda.is_available():
         st.success("🚀 GPU Available")
     else:
-        st.info("💻 Using CPU Mode")
+        st.info("💻 CPU Mode")
 
 # 메인 페이지 / Main Page
 st.title("🎬 Video to Text Converter")
 st.markdown("### AI-powered video transcription service / AI 기반 비디오 텍스트 변환 서비스")
 
+# 환경별 안내 메시지
+if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
+    st.info("☁️ **Cloud Demo Version** - For larger files (>200MB), please use the local version / 큰 파일(200MB 초과)은 로컬 버전을 사용하세요")
+else:
+    st.success("🏠 **Local Production Version** - Full features with GPU acceleration up to 2GB / GPU 가속을 포함한 모든 기능, 최대 2GB 지원")
+
 # 파일 업로드 / File Upload
 uploaded_file = st.file_uploader(
     "Choose a video or audio file / 비디오 또는 오디오 파일을 선택하세요",
     type=['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'webm', 'mp3', 'wav', 'm4a', 'aac'],
-    help="Maximum file size: 1GB / 최대 파일 크기: 1GB"
+    help=f"Maximum file size: {ENV_CONFIG['max_file_display']} / 최대 파일 크기: {ENV_CONFIG['max_file_display']}"
 )
 
 if uploaded_file is not None:
-    # 파일 정보 표시 / Display File Info
+    # 파일 크기 체크
     file_size_mb = uploaded_file.size / (1024*1024)
     
+    if file_size_mb > ENV_CONFIG['max_file_size_mb']:
+        st.error(f"❌ File too large! Maximum size: {ENV_CONFIG['max_file_display']} / 파일이 너무 큽니다! 최대 크기: {ENV_CONFIG['max_file_display']}")
+        st.stop()
+    
+    # 파일 정보 표시 / Display File Info
     col1, col2 = st.columns(2)
     with col1:
         file_details = {
@@ -188,7 +363,7 @@ if uploaded_file is not None:
 
 # 사용법 안내 / Usage Instructions
 with st.expander("📖 How to use / 사용 방법"):
-    st.markdown("""
+    st.markdown(f"""
     ### English:
     1. **Select Model**: Choose AI model size (tiny=fastest, small=most accurate)
     2. **Select Language**: Choose target language or use auto-detect
@@ -204,16 +379,18 @@ with st.expander("📖 How to use / 사용 방법"):
     5. **다운로드**: 필요시 텍스트 편집 후 결과 다운로드
     
     **Supported formats**: MP4, AVI, MOV, MKV, FLV, WMV, WEBM, MP3, WAV, M4A, AAC
-    **Maximum file size**: 1GB
+    **Current Environment**: {ENV_CONFIG['environment']}
+    **Maximum file size**: {ENV_CONFIG['max_file_display']}
     """)
 
 # 푸터 / Footer
 st.markdown("---")
 st.markdown(
-    """
+    f"""
     <div style='text-align: center'>
         <p>🎬 Video to Text Converter v1.0 | Powered by OpenAI Whisper & Streamlit</p>
         <p>💡 Free service for everyone! / 모두를 위한 무료 서비스!</p>
+        <p><small>{ENV_CONFIG['environment']} - Max File: {ENV_CONFIG['max_file_display']}</small></p>
     </div>
     """, 
     unsafe_allow_html=True
