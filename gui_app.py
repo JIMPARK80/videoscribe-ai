@@ -83,9 +83,17 @@ class VideoToTextGUI:
                                      command=self.start_processing, style="Accent.TButton")
         self.process_btn.grid(row=3, column=0, columnspan=3, pady=10)
         
-        # Progress bar
-        self.progress = ttk.Progressbar(main_frame, mode='indeterminate')
-        self.progress.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        # Progress bar with percentage
+        progress_frame = ttk.Frame(main_frame)
+        progress_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        progress_frame.columnconfigure(0, weight=1)
+        
+        self.progress = ttk.Progressbar(progress_frame, mode='determinate', maximum=100)
+        self.progress.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 10))
+        
+        # Progress percentage label
+        self.progress_var = tk.StringVar(value="0%")
+        ttk.Label(progress_frame, textvariable=self.progress_var, width=8).grid(row=0, column=1)
         
         # Status label
         self.status_var = tk.StringVar(value="Ready / 준비됨")
@@ -156,10 +164,13 @@ class VideoToTextGUI:
         self.language_detected_var.set("Processing...")
         self.word_count_var.set("0")
         
+        # Reset and start progress
+        self.progress['value'] = 0
+        self.progress_var.set("0%")
+        
         # Disable process button and start progress
         self.process_btn.config(state="disabled")
         self.save_btn.config(state="disabled")
-        self.progress.start()
         self.result_text.delete(1.0, tk.END)
         
         # Start processing in separate thread
@@ -167,20 +178,17 @@ class VideoToTextGUI:
         thread.daemon = True
         thread.start()
     
+    def update_progress(self, value, status):
+        """Update progress bar and status"""
+        self.progress['value'] = value
+        self.progress_var.set(f"{value}%")
+        self.status_var.set(status)
+    
     def process_video(self, file_path):
         try:
-            # Initialize converter if not already done
-            if self.converter is None:
-                self.root.after(0, lambda: self.status_var.set("Loading AI model... AI 모델 로딩중..."))
-                # Extract model name from the display text (e.g., "base (🏃 빠름, ⭐⭐ 좋은정확도)" -> "base")
-                model_display = self.model_var.get()
-                model_name = model_display.split(" (")[0] if " (" in model_display else model_display
-                use_gpu = self.use_gpu_var.get()
-                self.converter = VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
-            
-            # Get video duration first
-            self.root.after(0, lambda: self.status_var.set("Reading video info... 영상 정보 읽는중..."))
-            video_info = self.converter.get_video_info(file_path)
+            # Step 1: Reading video info (0-10%)
+            self.root.after(0, lambda: self.update_progress(5, "Reading video info... 영상 정보 읽는중..."))
+            video_info = self.converter.get_video_info(file_path) if self.converter else None
             
             if video_info and video_info.get('duration'):
                 duration = int(video_info['duration'])
@@ -190,12 +198,47 @@ class VideoToTextGUI:
                 duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
                 self.root.after(0, lambda: self.duration_var.set(duration_str))
             
+            self.root.after(0, lambda: self.update_progress(10, "Video info loaded 영상 정보 로딩 완료"))
+            
+            # Step 2: Initialize converter if not already done (10-25%)
+            if self.converter is None:
+                self.root.after(0, lambda: self.update_progress(15, "Loading AI model... AI 모델 로딩중..."))
+                # Extract model name from the display text
+                model_display = self.model_var.get()
+                model_name = model_display.split(" (")[0] if " (" in model_display else model_display
+                use_gpu = self.use_gpu_var.get()
+                self.converter = VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
+                self.root.after(0, lambda: self.update_progress(25, "AI model loaded AI 모델 로딩 완료"))
+            
+            # Step 3: Extract audio (25-40%)
+            self.root.after(0, lambda: self.update_progress(30, "Extracting audio... 오디오 추출중..."))
+            
             # Get language setting
             language = self.language_var.get() if self.language_var.get() != "auto" else None
             
-            # Process local video file
-            self.root.after(0, lambda: self.status_var.set("Processing video file... 영상 파일 처리중..."))
-            result = self.converter.process_local_video_with_info(file_path, language=language, save_transcript=False)
+            # Step 4: Process video with progress updates (40-90%)
+            self.root.after(0, lambda: self.update_progress(40, "Starting transcription... 텍스트 변환 시작..."))
+            
+            # Estimate processing time based on video duration
+            estimated_duration = video_info.get('duration', 300) if video_info else 300  # Default 5 minutes
+            
+            # Update progress during processing
+            import time
+            start_time = time.time()
+            
+            # Create progress callback function
+            def progress_callback(value, message):
+                self.root.after(0, lambda: self.update_progress(value, message))
+            
+            result = self.converter.process_local_video_with_info(
+                file_path, 
+                language=language, 
+                save_transcript=False, 
+                progress_callback=progress_callback
+            )
+            
+            # Step 5: Finalizing (90-100%)
+            self.root.after(0, lambda: self.update_progress(90, "Finalizing results... 결과 정리중..."))
             
             # Update UI with results
             if result and result.get('transcript'):
@@ -207,6 +250,8 @@ class VideoToTextGUI:
                 self.root.after(0, lambda: self.language_detected_var.set(detected_language.upper()))
                 self.root.after(0, lambda: self.word_count_var.set(f"{word_count:,}"))
                 
+                # Complete progress
+                self.root.after(0, lambda: self.update_progress(100, "Completed! 완료!"))
                 self.root.after(0, lambda: self.show_results(transcript))
             else:
                 self.root.after(0, lambda: self.show_error("Failed to extract text from video.\n영상에서 텍스트 추출에 실패했습니다."))
@@ -216,7 +261,8 @@ class VideoToTextGUI:
             self.root.after(0, lambda: self.show_error(error_msg))
     
     def show_results(self, transcript):
-        self.progress.stop()
+        self.progress['value'] = 100
+        self.progress_var.set("100%")
         self.process_btn.config(state="normal")
         self.save_btn.config(state="normal")
         self.status_var.set("Completed! / 완료!")
@@ -227,7 +273,8 @@ class VideoToTextGUI:
         messagebox.showinfo("Success / 성공", "Text extraction completed!\n텍스트 추출이 완료되었습니다!")
     
     def show_error(self, error_msg):
-        self.progress.stop()
+        self.progress['value'] = 0
+        self.progress_var.set("0%")
         self.process_btn.config(state="normal")
         self.status_var.set("Error / 오류")
         

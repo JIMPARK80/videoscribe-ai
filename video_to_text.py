@@ -410,7 +410,7 @@ class VideoToTextConverter:
             except Exception as e:
                 logger.warning(f"Failed to clean up temp directory: {e}")
     
-    def process_local_video_with_info(self, video_path, language=None, save_transcript=True, include_timestamps=False):
+    def process_local_video_with_info(self, video_path, language=None, save_transcript=True, include_timestamps=False, progress_callback=None):
         """
         Process local video file and return detailed information
         
@@ -419,6 +419,7 @@ class VideoToTextConverter:
             language (str): Language code for transcription
             save_transcript (bool): Whether to save transcript to file
             include_timestamps (bool): Whether to include timestamps in transcript
+            progress_callback (callable): Function to call with progress updates (value, message)
             
         Returns:
             dict: Detailed result with transcript, detected language, etc.
@@ -426,15 +427,27 @@ class VideoToTextConverter:
         temp_dir = tempfile.mkdtemp()
         
         try:
-            # Extract audio
+            # Extract audio (progress: 40-60%)
+            if progress_callback:
+                progress_callback(40, "Extracting audio from video... 비디오에서 오디오 추출중...")
+            
             audio_path = self.extract_audio_from_video(video_path, temp_dir)
             if not audio_path:
                 return None
             
-            # Transcribe
+            if progress_callback:
+                progress_callback(60, "Audio extracted successfully 오디오 추출 완료")
+            
+            # Transcribe (progress: 60-85%)
+            if progress_callback:
+                progress_callback(65, "Starting AI transcription... AI 텍스트 변환 시작...")
+            
             result = self.transcribe_audio(audio_path, language)
             if not result:
                 return None
+            
+            if progress_callback:
+                progress_callback(85, "Transcription completed 텍스트 변환 완료")
             
             transcript = result['text']
             detected_language = result.get('language', 'unknown')
