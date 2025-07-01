@@ -1,0 +1,237 @@
+================================================================================
+          VIDEO TO TEXT CONVERTER - 빌드 문제 해결 가이드
+          VIDEO TO TEXT CONVERTER - Build Troubleshooting Guide
+================================================================================
+
+⚠️ 핵심 문제 / Core Problem:
+VS Code에서는 정상 작동하지만 PyInstaller로 빌드한 실행파일에서는 실행 오류 발생
+Works in VS Code but fails when running PyInstaller-built executable
+
+🔍 주요 오류 메시지 / Common Error Messages:
+- [Errno 2] No such file or directory: '...\whisper\assets\mel_filters.npz'
+- FFmpeg not found
+- ModuleNotFoundError: No module named 'librosa'
+
+================================================================================
+💡 해결방법 1: Whisper Asset 파일 누락 문제 / Solution 1: Missing Whisper Asset Files
+================================================================================
+
+🚨 증상 / Symptoms:
+실행파일에서 텍스트 변환 시 mel_filters.npz 파일을 찾을 수 없다는 오류
+Error finding mel_filters.npz file during text conversion in executable
+
+🛠️ 해결책 / Solution:
+spec 파일에 Whisper 데이터 파일들을 포함시키기
+Include Whisper data files in spec file
+
+1) gui_app.spec 파일 상단에 추가 / Add to top of gui_app.spec:
+```
+from PyInstaller.utils.hooks import collect_data_files
+whisper_data = collect_data_files('whisper')
+torch_data = collect_data_files('torch')
+torchaudio_data = collect_data_files('torchaudio')
+```
+
+2) datas 섹션 수정 / Modify datas section:
+```
+datas=[
+    ('Youtube_text.ico', '.'),
+] + whisper_data + torch_data + torchaudio_data,
+```
+
+================================================================================
+💡 해결방법 2: Hidden Import 라이브러리 누락 / Solution 2: Missing Hidden Import Libraries
+================================================================================
+
+🚨 증상 / Symptoms:
+빌드 시 "Hidden import 'librosa' not found" 등의 오류
+"Hidden import 'librosa' not found" errors during build
+
+🛠️ 해결책 / Solution:
+spec 파일의 hiddenimports에 필수 라이브러리들 추가
+Add essential libraries to hiddenimports in spec file
+
+```
+hiddenimports=[
+    'whisper',
+    'torch', 'torchaudio', 
+    'moviepy', 'moviepy.editor',
+    'librosa', 'librosa.core', 'librosa.feature', 'librosa.util',
+    'scipy', 'scipy.signal', 'scipy.ndimage',
+    'numpy', 'numba', 'soundfile', 'resampy',
+    'tkinter', 'tkinter.ttk', 'tkinter.filedialog',
+    'tkinter.messagebox', 'tkinter.scrolledtext'
+],
+```
+
+================================================================================
+💡 해결방법 3: FFmpeg 경로 문제 / Solution 3: FFmpeg Path Issues
+================================================================================
+
+🚨 증상 / Symptoms:
+비디오 처리 시 FFmpeg를 찾을 수 없다는 오류
+FFmpeg not found error during video processing
+
+🛠️ 해결책 / Solution:
+시스템에 FFmpeg 설치 및 PATH 환경변수 등록
+Install FFmpeg on system and add to PATH environment variable
+
+1) FFmpeg 다운로드 / Download FFmpeg:
+   https://ffmpeg.org/download.html
+
+2) 환경변수 PATH에 FFmpeg 폴더 추가 / Add FFmpeg folder to PATH environment variable
+
+3) 확인 / Verify:
+```
+ffmpeg -version
+```
+
+================================================================================
+🚀 성능 최적화 (핵심) / Performance Optimization (Core)
+================================================================================
+
+⏱️ 문제: 실행파일 시작 시간 10-30초 소요 / Problem: 10-30 seconds startup time
+✅ 해결: OneDir 모드 사용으로 1-3초로 단축 / Solution: Use OneDir mode to reduce to 1-3 seconds
+
+spec 파일 설정 / Spec file configuration:
+```
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,  # OneDir 모드 활성화 / Enable OneDir mode
+    name='VideoToTextConverter',
+    console=False,
+    upx=False,             # UPX 압축 비활성화 / Disable UPX compression
+    icon='Youtube_text.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    name='VideoToTextConverter',
+)
+```
+
+결과: 폴더 배포 방식, 빠른 시작 / Result: Folder distribution, fast startup
+
+================================================================================
+📄 완성된 gui_app.spec 파일 / Complete gui_app.spec File
+================================================================================
+
+```
+# -*- mode: python ; coding: utf-8 -*-
+
+import os
+from PyInstaller.utils.hooks import collect_data_files
+
+# AI 라이브러리 데이터 파일 수집 / Collect AI library data files
+whisper_data = collect_data_files('whisper')
+torch_data = collect_data_files('torch')
+torchaudio_data = collect_data_files('torchaudio')
+
+a = Analysis(
+    ['gui_app.py'],
+    pathex=[],
+    binaries=[],
+    datas=[
+        ('Youtube_text.ico', '.'),
+    ] + whisper_data + torch_data + torchaudio_data,
+    hiddenimports=[
+        'whisper',
+        'torch', 'torchaudio', 
+        'moviepy', 'moviepy.editor',
+        'librosa', 'librosa.core', 'librosa.feature', 'librosa.util',
+        'scipy', 'scipy.signal', 'scipy.ndimage',
+        'numpy', 'numba', 'soundfile', 'resampy',
+        'tkinter', 'tkinter.ttk', 'tkinter.filedialog',
+        'tkinter.messagebox', 'tkinter.scrolledtext',
+        'threading', 'pathlib', 'tempfile', 'shutil', 'subprocess'
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+    optimize=0,
+)
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='VideoToTextConverter',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='Youtube_text.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='VideoToTextConverter',
+)
+```
+
+================================================================================
+🔧 빌드 명령어 / Build Commands
+================================================================================
+
+```bash
+# 이전 빌드 정리 / Clean previous builds
+rmdir /s /q build
+rmdir /s /q dist
+
+# 빌드 실행 / Run build
+pyinstaller --clean --noconfirm gui_app.spec
+
+# 실행 테스트 / Test execution
+cd dist\VideoToTextConverter
+.\VideoToTextConverter.exe
+```
+
+================================================================================
+✅ 성공적인 결과 / Successful Results
+================================================================================
+
+빌드 후 생성되는 구조 / Structure created after build:
+```
+dist/
+└── VideoToTextConverter/
+    ├── VideoToTextConverter.exe    ← 실행파일 / Executable
+    ├── _internal/                  ← 라이브러리들 / Libraries
+    │   ├── whisper/               ← Whisper 파일들 / Whisper files
+    │   └── ... (기타 / Others)
+    └── Youtube_text.ico           ← 아이콘 / Icon
+```
+
+성능 / Performance:
+✅ 시작 시간: 1-3초 / Startup time: 1-3 seconds
+✅ mel_filters.npz 오류 해결 / mel_filters.npz error resolved
+✅ 안정적인 텍스트 변환 / Stable text conversion
+
+배포 / Distribution:
+VideoToTextConverter 폴더 전체를 복사하여 배포
+Copy entire VideoToTextConverter folder for distribution
+
+================================================================================ 
