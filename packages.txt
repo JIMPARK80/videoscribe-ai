@@ -1,0 +1,8 @@
+ffmpeg
+libsm6
+libxext6
+libxrender-dev
+libgomp1
+libsndfile1
+libavcodec58
+libavformat58 

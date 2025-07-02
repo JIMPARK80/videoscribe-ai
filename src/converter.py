@@ -349,10 +349,17 @@ class VideoToTextConverter:
                             
                             # 파일이 실제 비디오인지 검증
                             try:
-                                from moviepy.editor import VideoFileClip
-                                with VideoFileClip(selected_file) as test_clip:
-                                    if test_clip.duration and test_clip.duration > 0:
-                                        print(f"Success with strategy {strategy_num}!")
+                                # 클라우드 환경에서는 MoviePy 없이 파일 존재만 확인
+                                try:
+                                    from moviepy.editor import VideoFileClip
+                                    with VideoFileClip(selected_file) as test_clip:
+                                        if test_clip.duration and test_clip.duration > 0:
+                                            print(f"Success with strategy {strategy_num}!")
+                                            return selected_file
+                                except ImportError:
+                                    # MoviePy 없으면 파일 존재와 크기만 확인
+                                    if os.path.exists(selected_file) and os.path.getsize(selected_file) > 1000:
+                                        print(f"Success with strategy {strategy_num} (no MoviePy validation)!")
                                         return selected_file
                             except Exception as e:
                                 print(f"Strategy {strategy_num}: Video validation failed: {e}")
@@ -471,12 +478,22 @@ class VideoToTextConverter:
             dict: 비디오 정보 (duration, fps, size)
         """
         try:
-            from moviepy.editor import VideoFileClip
-            with VideoFileClip(file_path) as video:
+            # MoviePy 우선 시도
+            try:
+                from moviepy.editor import VideoFileClip
+                with VideoFileClip(file_path) as video:
+                    return {
+                        'duration': video.duration,
+                        'fps': video.fps,
+                        'size': (video.w, video.h)
+                    }
+            except ImportError:
+                # MoviePy 없으면 기본 정보만 반환
+                import os
                 return {
-                    'duration': video.duration,
-                    'fps': video.fps,
-                    'size': (video.w, video.h)
+                    'duration': None,
+                    'fps': 30,  # 기본값
+                    'size': (1920, 1080)  # 기본값
                 }
         except Exception as e:
             print(f"Error getting video info: {e}")
@@ -526,17 +543,40 @@ class VideoToTextConverter:
                 safe_local_callback(60, "Extracting audio... / 오디오 추출 중...", 
                                   processing_details="Using MoviePy for audio extraction")
             
-            # MoviePy를 사용하여 오디오 추출
-            from moviepy.editor import VideoFileClip
-            
+            # 오디오 추출 (MoviePy 우선, 없으면 FFmpeg 직접 사용)
             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_audio:
                 temp_audio_path = tmp_audio.name
             
             try:
-                with VideoFileClip(file_path) as video:
-                    audio = video.audio
-                    audio.write_audiofile(temp_audio_path, verbose=False, logger=None)
-                    audio.close()
+                # MoviePy 우선 시도
+                try:
+                    from moviepy.editor import VideoFileClip
+                    with VideoFileClip(file_path) as video:
+                        audio = video.audio
+                        audio.write_audiofile(temp_audio_path, verbose=False, logger=None)
+                        audio.close()
+                except ImportError:
+                    # MoviePy 없으면 FFmpeg 직접 사용
+                    import subprocess
+                    ffmpeg_cmd = [
+                        'ffmpeg', '-i', file_path, 
+                        '-vn',  # 비디오 스트림 제거
+                        '-acodec', 'pcm_s16le',  # WAV 포맷
+                        '-ar', '16000',  # 샘플링 레이트
+                        '-ac', '1',  # 모노
+                        '-y',  # 덮어쓰기
+                        temp_audio_path
+                    ]
+                    
+                    result = subprocess.run(ffmpeg_cmd, 
+                                          capture_output=True, 
+                                          text=True, 
+                                          timeout=300)  # 5분 타임아웃
+                    
+                    if result.returncode != 0:
+                        raise Exception(f"FFmpeg failed: {result.stderr}")
+                    
+                    print("Audio extracted using FFmpeg (MoviePy not available)")
                 
                 # AI 모델 로딩 완료 - 간단한 진행률 업데이트만
                 if progress_callback:
