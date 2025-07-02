@@ -73,19 +73,65 @@ class VideoToTextGUI:
         self._create_results_section(main_frame)
     
     def _create_input_section(self, parent):
-        """파일 입력 섹션 생성"""
-        input_frame = ttk.LabelFrame(parent, text="Video File Selection / 비디오 파일 선택", padding="10")
+        """입력 섹션 생성"""
+        input_frame = ttk.LabelFrame(parent, text="Video Input / 비디오 입력", padding="10")
         input_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         input_frame.columnconfigure(1, weight=1)
         
-        # File selection
-        ttk.Label(input_frame, text="Select Video File / 비디오 파일 선택:").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
-        self.file_var = tk.StringVar()
-        file_entry = ttk.Entry(input_frame, textvariable=self.file_var, width=50)
-        file_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 5), pady=(0, 5))
+        # Input type selection (Radio buttons)
+        self.input_type = tk.StringVar(value="file")
         
-        browse_btn = ttk.Button(input_frame, text="Browse / 찾기", command=self.browse_file)
-        browse_btn.grid(row=0, column=2, pady=(0, 5))
+        type_frame = ttk.Frame(input_frame)
+        type_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        file_radio = ttk.Radiobutton(type_frame, text="📁 Local Video File / 로컬 비디오 파일", 
+                                    variable=self.input_type, value="file", command=self.on_input_type_change)
+        file_radio.grid(row=0, column=0, sticky=tk.W, padx=(0, 20))
+        
+        url_radio = ttk.Radiobutton(type_frame, text="🎬 YouTube URL / 유튜브 링크", 
+                                   variable=self.input_type, value="url", command=self.on_input_type_change)
+        url_radio.grid(row=0, column=1, sticky=tk.W)
+        
+        # File selection section
+        self.file_section = ttk.Frame(input_frame)
+        self.file_section.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(5, 0))
+        self.file_section.columnconfigure(1, weight=1)
+        
+        ttk.Label(self.file_section, text="Select Video File / 비디오 파일 선택:").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        self.file_var = tk.StringVar()
+        self.file_entry = ttk.Entry(self.file_section, textvariable=self.file_var, width=50)
+        self.file_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 5), pady=(0, 5))
+        
+        self.browse_btn = ttk.Button(self.file_section, text="Browse / 찾기", command=self.browse_file)
+        self.browse_btn.grid(row=0, column=2, pady=(0, 5))
+        
+        # URL input section
+        self.url_section = ttk.Frame(input_frame)
+        self.url_section.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(5, 0))
+        self.url_section.columnconfigure(1, weight=1)
+        
+        ttk.Label(self.url_section, text="YouTube URL / 유튜브 링크:").grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        self.url_var = tk.StringVar()
+        self.url_entry = ttk.Entry(self.url_section, textvariable=self.url_var, width=50,
+                                  font=("Arial", 9))
+        self.url_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 5), pady=(0, 5))
+        
+        self.validate_btn = ttk.Button(self.url_section, text="Validate / 검증", command=self.validate_url)
+        self.validate_btn.grid(row=0, column=2, pady=(0, 5))
+        
+        # URL placeholder text
+        self.url_entry.insert(0, "https://www.youtube.com/watch?v=...")
+        self.url_entry.bind("<FocusIn>", self.on_url_focus_in)
+        self.url_entry.bind("<FocusOut>", self.on_url_focus_out)
+        self.url_entry.config(foreground="gray")
+        
+        # URL validation result
+        self.url_status_var = tk.StringVar(value="")
+        self.url_status_label = ttk.Label(self.url_section, textvariable=self.url_status_var, font=("Arial", 8))
+        self.url_status_label.grid(row=1, column=1, sticky=tk.W, padx=(10, 0), pady=(2, 0))
+        
+        # Initially show file section
+        self.on_input_type_change()
     
     def _create_options_section(self, parent):
         """옵션 섹션 생성"""
@@ -196,6 +242,62 @@ class VideoToTextGUI:
         self.word_count_var = tk.StringVar(value="0")
         ttk.Label(info_frame, textvariable=self.word_count_var, font=("Arial", 9, "bold")).grid(row=0, column=5, sticky=tk.W, padx=(10, 0))
     
+    def on_input_type_change(self):
+        """입력 타입 변경 시 호출"""
+        if self.input_type.get() == "file":
+            # 파일 섹션 표시, URL 섹션 숨김
+            for widget in self.file_section.winfo_children():
+                widget.grid()
+            for widget in self.url_section.winfo_children():
+                widget.grid_remove()
+        else:
+            # URL 섹션 표시, 파일 섹션 숨김
+            for widget in self.file_section.winfo_children():
+                widget.grid_remove()
+            for widget in self.url_section.winfo_children():
+                widget.grid()
+    
+    def on_url_focus_in(self, event):
+        """URL 입력 필드 포커스 시"""
+        if self.url_var.get() == "https://www.youtube.com/watch?v=...":
+            self.url_var.set("")
+            self.url_entry.config(foreground="black")
+    
+    def on_url_focus_out(self, event):
+        """URL 입력 필드 포커스 해제 시"""
+        if not self.url_var.get().strip():
+            self.url_var.set("https://www.youtube.com/watch?v=...")
+            self.url_entry.config(foreground="gray")
+    
+    def validate_url(self):
+        """YouTube URL 검증"""
+        url = self.url_var.get().strip()
+        if not url or url == "https://www.youtube.com/watch?v=...":
+            self.url_status_var.set("❌ Please enter a YouTube URL / YouTube URL을 입력하세요")
+            return False
+        
+        # Initialize converter if needed
+        if not self.converter:
+            self.converter = VideoToTextConverter()
+        
+        if self.converter.is_youtube_url(url):
+            try:
+                # Try to get video info
+                info = self.converter.get_youtube_info(url)
+                if info:
+                    duration_str = f"{int(info['duration']//60)}:{int(info['duration']%60):02d}" if info['duration'] else "Unknown"
+                    self.url_status_var.set(f"✅ Valid: {info['title'][:40]}... ({duration_str})")
+                    return True
+                else:
+                    self.url_status_var.set("❌ Failed to get video info / 영상 정보를 가져올 수 없습니다")
+                    return False
+            except Exception as e:
+                self.url_status_var.set(f"❌ Error: {str(e)[:50]}...")
+                return False
+        else:
+            self.url_status_var.set("❌ Invalid YouTube URL format / 유효하지 않은 YouTube URL 형식")
+            return False
+    
     def browse_file(self):
         """파일 선택 대화상자"""
         filename = filedialog.askopenfilename(
@@ -210,16 +312,26 @@ class VideoToTextGUI:
     
     def start_processing(self):
         """비디오 처리 시작"""
-        # Get input
-        file_path = self.file_var.get().strip()
-        
-        if not file_path:
-            messagebox.showerror("Error / 오류", "Please select a video file.\n비디오 파일을 선택해주세요.")
-            return
-        
-        if not os.path.exists(file_path):
-            messagebox.showerror("Error / 오류", f"File not found: {file_path}\n파일을 찾을 수 없습니다: {file_path}")
-            return
+        # Check input type and validate
+        if self.input_type.get() == "file":
+            file_path = self.file_var.get().strip()
+            if not file_path:
+                messagebox.showerror("Error", "Please select a video file first.\n먼저 비디오 파일을 선택해주세요.")
+                return
+            
+            if not os.path.exists(file_path):
+                messagebox.showerror("Error", "Selected file does not exist.\n선택한 파일이 존재하지 않습니다.")
+                return
+        else:
+            url = self.url_var.get().strip()
+            if not url or url == "https://www.youtube.com/watch?v=...":
+                messagebox.showerror("Error", "Please enter a YouTube URL first.\n먼저 YouTube URL을 입력해주세요.")
+                return
+            
+            # Validate URL before processing
+            if not self.validate_url():
+                messagebox.showerror("Error", "Invalid YouTube URL. Please check the URL.\n유효하지 않은 YouTube URL입니다. URL을 확인해주세요.")
+                return
         
         # Reset info display
         self.duration_var.set("--:--:--")
@@ -237,8 +349,14 @@ class VideoToTextGUI:
         self.save_btn.config(state="disabled")
         self.result_text.delete(1.0, tk.END)
         
-        # Start processing in separate thread
-        thread = threading.Thread(target=self.process_video, args=(file_path,))
+        # Start processing in a separate thread
+        if self.input_type.get() == "file":
+            file_path = self.file_var.get().strip()
+            thread = threading.Thread(target=self.process_video, args=(file_path, "file"))
+        else:
+            url = self.url_var.get().strip()
+            thread = threading.Thread(target=self.process_video, args=(url, "url"))
+        
         thread.daemon = True
         thread.start()
     
@@ -279,22 +397,25 @@ class VideoToTextGUI:
         if value in progress_steps:
             self.update_progress_text(progress_steps[value])
     
-    def process_video(self, file_path):
-        """비디오 처리 (백그라운드 스레드)"""
+    def process_video(self, input_path, input_type):
+        """비디오 파일/URL 처리 (백그라운드 스레드)"""
         try:
-            # Step 1: Reading video info (0-10%)
-            self.root.after(0, lambda: self.update_progress(5, "Reading video info... 영상 정보 읽는중..."))
-            video_info = self.converter.get_video_info(file_path) if self.converter else None
+            # Step 1: Initialize (0-10%)
+            if input_type == "file":
+                self.root.after(0, lambda: self.update_progress(5, "Reading video info... 영상 정보 읽는중..."))
+                video_info = self.converter.get_video_info(input_path) if self.converter else None
+                
+                if video_info and video_info.get('duration'):
+                    duration = int(video_info['duration'])
+                    hours = duration // 3600
+                    minutes = (duration % 3600) // 60
+                    seconds = duration % 60
+                    duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                    self.root.after(0, lambda: self.duration_var.set(duration_str))
+            else:
+                self.root.after(0, lambda: self.update_progress(5, "Validating YouTube URL... YouTube URL 검증 중..."))
             
-            if video_info and video_info.get('duration'):
-                duration = int(video_info['duration'])
-                hours = duration // 3600
-                minutes = (duration % 3600) // 60
-                seconds = duration % 60
-                duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-                self.root.after(0, lambda: self.duration_var.set(duration_str))
-            
-            self.root.after(0, lambda: self.update_progress(10, "Video info loaded 영상 정보 로딩 완료"))
+            self.root.after(0, lambda: self.update_progress(10, "Initialization completed... 초기화 완료"))
             
             # Step 2: Initialize converter if not already done (10-25%)
             if self.converter is None:
@@ -313,25 +434,39 @@ class VideoToTextGUI:
                     self.root.after(0, lambda: self.show_error(error_msg))
                     return
             
-            # Step 3: Extract audio (25-40%)
-            self.root.after(0, lambda: self.update_progress(30, "Extracting audio... 오디오 추출중..."))
-            
             # Get language setting
             language = self.language_var.get() if self.language_var.get() != "auto" else None
-            
-            # Step 4: Process video with progress updates (40-90%)
-            self.root.after(0, lambda: self.update_progress(40, "Starting transcription... 텍스트 변환 시작..."))
             
             # Create progress callback function
             def progress_callback(value, message):
                 self.root.after(0, lambda: self.update_progress(value, message))
             
-            result = self.converter.process_local_video_with_info(
-                file_path, 
-                language=language, 
-                save_transcript=False, 
-                progress_callback=progress_callback
-            )
+            # Process based on input type
+            if input_type == "file":
+                result = self.converter.process_local_video_with_info(
+                    input_path, 
+                    language=language, 
+                    save_transcript=False, 
+                    progress_callback=progress_callback
+                )
+            else:
+                result = self.converter.process_youtube_video(
+                    input_path,
+                    language=language,
+                    save_transcript=False,
+                    progress_callback=progress_callback
+                )
+                
+                # Display YouTube video information
+                if result and 'youtube_info' in result:
+                    yt_info = result['youtube_info']
+                    if yt_info['duration']:
+                        duration_seconds = yt_info['duration']
+                        hours = int(duration_seconds // 3600)
+                        minutes = int((duration_seconds % 3600) // 60)
+                        seconds = int(duration_seconds % 60)
+                        duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                        self.root.after(0, lambda: self.duration_var.set(duration_str))
             
             # Step 5: Finalizing (90-100%)
             self.root.after(0, lambda: self.update_progress(90, "Finalizing results... 결과 정리중..."))

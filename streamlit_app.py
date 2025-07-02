@@ -2,6 +2,7 @@ import streamlit as st
 import tempfile
 import os
 import torch
+import traceback
 import whisper
 
 # 모듈 임포트
@@ -10,6 +11,13 @@ from src.converter import VideoToTextConverter
 
 # FFmpeg 경로 설정 실행
 setup_ffmpeg_path()
+
+# yt-dlp 버전 확인을 위한 임포트
+try:
+    import yt_dlp
+    YT_DLP_VERSION = yt_dlp.version.__version__
+except ImportError:
+    YT_DLP_VERSION = "Not installed"
 
 # 환경 감지 / Environment Detection
 def get_environment_config():
@@ -127,10 +135,384 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# GPU 사용 가능 여부 확인 / Check GPU availability
+use_gpu = torch.cuda.is_available()
+
 # 캐시된 변환기 로딩 / Load Cached Converter
 @st.cache_resource
 def load_video_converter(model_name, use_gpu=True):
     return VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
+
+# 파일 업로드 처리 함수 / File Upload Processing Function
+def process_file_upload(uploaded_file, selected_model, selected_language, use_gpu):
+    """파일 업로드 처리 함수"""
+    if uploaded_file is not None:
+        # 파일 크기 체크
+        file_size_mb = uploaded_file.size / (1024*1024)
+        
+        if file_size_mb > ENV_CONFIG['max_file_size_mb']:
+            st.error(f"❌ File too large! Maximum size: {ENV_CONFIG['max_file_display']} / 파일이 너무 큽니다! 최대 크기: {ENV_CONFIG['max_file_display']}")
+            st.stop()
+        
+        # 파일 정보 표시 / Display File Info
+        col1, col2 = st.columns(2)
+        with col1:
+            file_details = {
+                "Filename": uploaded_file.name,
+                "File size": f"{file_size_mb:.1f} MB"
+            }
+            st.json(file_details)
+        
+        with col2:
+            model_options_display = {
+                "tiny": "🚀 Tiny (매우빠름, ⭐ 기본정확도) / Very Fast, Basic Accuracy",
+                "base": "⚡ Base (빠름, ⭐⭐ 좋은정확도) / Fast, Good Accuracy", 
+                "small": "🚶 Small (보통, ⭐⭐⭐ 더좋음) / Normal, Higher Accuracy",
+                "medium": "🐌 Medium (느림, ⭐⭐⭐⭐ 높음) / Slow, High Accuracy",
+                "large": "🐌🐌 Large (매우느림, ⭐⭐⭐⭐⭐ 최고) / Very Slow, Best Accuracy"
+            }
+            language_options_display = {
+                "auto": "🌐 Auto Detect / 자동감지",
+                "ko": "🇰🇷 Korean / 한국어",
+                "en": "🇺🇸 English / 영어", 
+                "ja": "🇯🇵 Japanese / 일본어",
+                "zh": "🇨🇳 Chinese / 중국어",
+                "es": "🇪🇸 Spanish / 스페인어",
+                "fr": "🇫🇷 French / 프랑스어",
+                "de": "🇩🇪 German / 독일어"
+            }
+            model_info = {
+                "Selected Model": model_options_display[selected_model].split(' /')[0],
+                "Language": language_options_display[selected_language].split(' /')[0]
+            }
+            st.json(model_info)
+        
+        # 변환 버튼 / Convert Button
+        if st.button("🚀 Convert to Text / 텍스트 변환", type="primary", use_container_width=True):
+            
+            # GUI 스타일 진행률 컨테이너
+            progress_container = st.container()
+            
+            with progress_container:
+                # 진행률 바와 퍼센트 표시
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    progress_bar = st.progress(0)
+                with col2:
+                    progress_percent = st.empty()
+                
+                # 상태 텍스트와 단계별 진행 표시
+                status_text = st.empty()
+                progress_steps = st.empty()
+            
+            def update_progress_gui_style(value, step_message, status_message=""):
+                """GUI 스타일 진행률 업데이트"""
+                progress_bar.progress(value)
+                progress_percent.text(f"{value}%")
+                if status_message:
+                    status_text.text(status_message)
+                if step_message:
+                    progress_steps.markdown(f"**• {step_message}**")
+            
+            try:
+                # Step 1/6: 파일 정보 읽기 (5%)
+                update_progress_gui_style(5,
+                    "📹 Step 1/6: Reading video information / 영상 정보 읽는중...",
+                    "📁 Saving uploaded file... / 업로드된 파일 저장 중...")
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
+                    tmp_file.write(uploaded_file.read())
+                    temp_file_path = tmp_file.name
+                
+                # Step 1/6: 완료 (10%)
+                update_progress_gui_style(10,
+                    "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
+                
+                # Step 2/6: AI 모델 로딩 (15%)
+                update_progress_gui_style(15,
+                    "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...",
+                    f"🤖 Loading {selected_model} model... / {selected_model} 모델 로딩 중...")
+                
+                use_gpu = torch.cuda.is_available()
+                converter = load_video_converter(selected_model, use_gpu)
+                
+                # Step 2/6: 완료 (25%)
+                update_progress_gui_style(25,
+                    "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
+                
+                # Step 3/6: 오디오 추출 준비 (30%)
+                update_progress_gui_style(30,
+                    "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
+                
+                # 언어 설정
+                language = None if selected_language == "auto" else selected_language
+                
+                # GUI 스타일 진행률 콜백 함수
+                def progress_callback(value, message):
+                    if value >= 40 and value < 60:
+                        step_msg = "🎵 Step 4/6: Extracting audio from video / 비디오에서 오디오 추출중..."
+                    elif value == 60:
+                        step_msg = "✅ Step 4/6: Audio extraction completed / 오디오 추출 완료"
+                    elif value >= 65 and value < 85:
+                        step_msg = "🔄 Step 5/6: Starting AI transcription / AI 텍스트 변환 시작..."
+                    elif value == 85:
+                        step_msg = "✅ Step 5/6: Transcription completed / 텍스트 변환 완료"
+                    elif value >= 90:
+                        step_msg = "📝 Step 6/6: Finalizing results / 결과 정리중..."
+                    else:
+                        step_msg = ""
+                    
+                    update_progress_gui_style(min(value, 95), step_msg, message)
+                
+                # 변환 실행
+                result = converter.process_local_video_with_info(
+                    temp_file_path, 
+                    language=language, 
+                    save_transcript=False,
+                    progress_callback=progress_callback
+                )
+                
+                # Step 6/6: 완료 (100%)
+                update_progress_gui_style(100,
+                    "🎉 Step 6/6: All completed! / 모든 단계 완료!",
+                    "✅ Conversion completed! / 변환 완료!")
+                
+                # 결과 표시
+                st.success("🎉 Transcription completed successfully! / 텍스트 변환이 성공적으로 완료되었습니다!")
+                
+                # 변환된 텍스트 / Converted Text
+                st.subheader("📝 Transcribed Text / 변환된 텍스트")
+                
+                transcript_text = result.get("transcript", "").strip()
+                
+                if transcript_text:
+                    # 텍스트 영역 / Text Area
+                    edited_text = st.text_area(
+                        "Edit the text if needed / 필요시 텍스트를 편집하세요:",
+                        value=transcript_text,
+                        height=300,
+                        help="You can edit the transcribed text before downloading / 다운로드 전에 변환된 텍스트를 편집할 수 있습니다"
+                    )
+                    
+                    # 통계 정보 / Statistics
+                    word_count = len(edited_text.split())
+                    char_count = len(edited_text)
+                    detected_lang = result.get("detected_language", "unknown")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Language / 언어", detected_lang.upper())
+                    with col2:
+                        st.metric("Words / 단어수", word_count)
+                    with col3:
+                        st.metric("Characters / 문자수", char_count)
+                    
+                    # 다운로드 버튼 / Download Button
+                    st.download_button(
+                        label="📥 Download Text File / 텍스트 파일 다운로드",
+                        data=edited_text,
+                        file_name=f"{uploaded_file.name.split('.')[0]}_transcript.txt",
+                        mime="text/plain",
+                        use_container_width=True
+                    )
+                else:
+                    st.warning("⚠️ No speech detected in the file. Please check if the file contains audio. / 파일에서 음성이 감지되지 않았습니다. 파일에 오디오가 포함되어 있는지 확인해주세요.")
+                
+                # 임시 파일 정리 / Clean up temporary files
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+                    
+            except Exception as e:
+                st.error(f"❌ Error occurred: {str(e)} / 오류가 발생했습니다: {str(e)}")
+                progress_bar.progress(0)
+                status_text.text("❌ Conversion failed / 변환 실패")
+                
+                # 임시 파일 정리 / Clean up temporary files
+                try:
+                    if 'temp_file_path' in locals():
+                        os.unlink(temp_file_path)
+                except:
+                    pass
+
+# YouTube 비디오 처리 함수 / YouTube Video Processing Function
+def process_youtube_video(youtube_url, model_size, language, use_gpu):
+    """YouTube 비디오를 처리하고 결과를 표시합니다 (GUI 스타일 진행률 포함)"""
+    
+    # GUI 스타일 진행률 컨테이너
+    progress_container = st.container()
+    
+    with progress_container:
+        # 진행률 바와 퍼센트 표시
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            progress_bar = st.progress(0)
+        with col2:
+            progress_percent = st.empty()
+        
+        # 상태 텍스트와 단계별 진행 표시
+        status_text = st.empty()
+        progress_steps = st.empty()
+    
+    def update_progress_gui_style(value, step_message, status_message=""):
+        """GUI 스타일 진행률 업데이트"""
+        progress_bar.progress(value)
+        progress_percent.text(f"{value}%")
+        if status_message:
+            status_text.text(status_message)
+        if step_message:
+            progress_steps.markdown(f"**• {step_message}**")
+    
+    try:
+        # Step 1/6: 초기화 (5%)
+        update_progress_gui_style(5, 
+            "📹 Step 1/6: Reading video information / 영상 정보 읽는중...",
+            "🔍 Validating YouTube URL... / YouTube URL 검증 중...")
+        
+        # 변환기 로딩
+        converter = load_video_converter(model_size, use_gpu)
+        
+        # URL 검증
+        if not converter.is_youtube_url(youtube_url):
+            st.error("❌ Invalid YouTube URL / 유효하지 않은 YouTube URL입니다")
+            return
+        
+        # Step 1/6: 완료 (10%)
+        update_progress_gui_style(10, 
+            "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
+        
+        # Step 2/6: AI 모델 로딩 (15%)
+        update_progress_gui_style(15,
+            "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...",
+            f"🤖 Loading {model_size} model... / {model_size} 모델 로딩 중...")
+        
+        # YouTube 정보 가져오기
+        youtube_info = converter.get_youtube_info(youtube_url)
+        if not youtube_info:
+            st.error("❌ Failed to get YouTube video information / YouTube 영상 정보를 가져올 수 없습니다")
+            return
+        
+        # Step 2/6: 완료 (25%)
+        update_progress_gui_style(25,
+            "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
+        
+        # 영상 정보 표시 (GUI와 동일한 형식)
+        with st.expander("📺 YouTube Video Information / 유튜브 영상 정보", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Title / 제목:** {youtube_info['title']}")
+                st.write(f"**Uploader / 업로더:** {youtube_info['uploader']}")
+            with col2:
+                # Duration 포맷팅 (GUI와 동일)
+                if youtube_info['duration']:
+                    duration_seconds = int(youtube_info['duration'])
+                    hours = duration_seconds // 3600
+                    minutes = (duration_seconds % 3600) // 60
+                    seconds = duration_seconds % 60
+                    duration_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                else:
+                    duration_str = "--:--:--"
+                st.write(f"**Duration / 재생시간:** {duration_str}")
+                st.write(f"**Views / 조회수:** {youtube_info.get('view_count', 'Unknown'):,}" if isinstance(youtube_info.get('view_count'), int) else f"**Views / 조회수:** Unknown")
+        
+        # Step 3/6: 오디오 추출 준비 (30%)
+        update_progress_gui_style(30,
+            "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
+        
+        # 언어 설정
+        lang = None if language == "auto" else language
+        
+        # GUI 스타일 진행률 콜백 함수
+        def progress_callback(value, message):
+            if value >= 40 and value < 60:
+                step_msg = "🎵 Step 4/6: Extracting audio from video / 비디오에서 오디오 추출중..."
+            elif value == 60:
+                step_msg = "✅ Step 4/6: Audio extraction completed / 오디오 추출 완료"
+            elif value >= 65 and value < 85:
+                step_msg = "🔄 Step 5/6: Starting AI transcription / AI 텍스트 변환 시작..."
+            elif value == 85:
+                step_msg = "✅ Step 5/6: Transcription completed / 텍스트 변환 완료"
+            elif value >= 90:
+                step_msg = "📝 Step 6/6: Finalizing results / 결과 정리중..."
+            else:
+                step_msg = ""
+            
+            update_progress_gui_style(min(value, 95), step_msg, message)
+        
+        # YouTube 비디오 처리
+        result = converter.process_youtube_video(
+            youtube_url,
+            language=lang,
+            save_transcript=False,
+            progress_callback=progress_callback
+        )
+        
+        # Step 6/6: 완료 (100%)
+        update_progress_gui_style(100,
+            "🎉 Step 6/6: All completed! / 모든 단계 완료!",
+            "✅ Conversion completed! / 변환 완료!")
+        
+        # 결과 표시
+        st.success("🎉 YouTube transcription completed successfully! / YouTube 텍스트 변환이 성공적으로 완료되었습니다!")
+        
+        # 변환된 텍스트 / Converted Text
+        st.subheader("📝 Transcribed Text / 변환된 텍스트")
+        
+        transcript_text = result.get("transcript", "").strip()
+        
+        if transcript_text:
+            # 텍스트 영역 / Text Area
+            edited_text = st.text_area(
+                "Edit the text if needed / 필요시 텍스트를 편집하세요:",
+                value=transcript_text,
+                height=300,
+                help="You can edit the transcribed text before downloading / 다운로드 전에 변환된 텍스트를 편집할 수 있습니다"
+            )
+            
+            # 통계 정보 / Statistics
+            word_count = len(edited_text.split())
+            char_count = len(edited_text)
+            detected_lang = result.get("detected_language", "unknown")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Language / 언어", detected_lang.upper())
+            with col2:
+                st.metric("Words / 단어수", word_count)
+            with col3:
+                st.metric("Characters / 문자수", char_count)
+            
+            # 파일명 생성 (YouTube 제목 기반)
+            safe_title = "".join(c for c in youtube_info['title'] if c.isalnum() or c in (' ', '-', '_')).rstrip()[:50]
+            filename = f"{safe_title}_transcript.txt" if safe_title else "youtube_transcript.txt"
+            
+            # 다운로드 버튼 / Download Button
+            st.download_button(
+                label="📥 Download Text File / 텍스트 파일 다운로드",
+                data=edited_text,
+                file_name=filename,
+                mime="text/plain",
+                use_container_width=True
+            )
+        else:
+            st.warning("⚠️ No speech detected in the video. Please check if the video contains audio. / 영상에서 음성이 감지되지 않았습니다. 영상에 오디오가 포함되어 있는지 확인해주세요.")
+        
+    except Exception as e:
+        st.error(f"❌ Error occurred: {str(e)} / 오류가 발생했습니다: {str(e)}")
+        
+        # 상세 에러 정보 표시
+        with st.expander("🔍 Error Details / 에러 상세 정보"):
+            st.text(f"Error Type: {type(e).__name__}")
+            st.text(f"Error Message: {str(e)}")
+            st.code(traceback.format_exc())
+        
+        # 진행률 리셋
+        try:
+            progress_bar.progress(0)
+            status_text.text("❌ Conversion failed / 변환 실패")
+        except:
+            pass
 
 # 사이드바 설정 / Sidebar Configuration  
 with st.sidebar:
@@ -139,6 +521,7 @@ with st.sidebar:
     # 환경 정보 표시
     st.info(f"🌍 Environment: {ENV_CONFIG['environment']}")
     st.info(f"📁 Max File Size: {ENV_CONFIG['max_file_display']}")
+    st.info(f"📹 yt-dlp Version: {YT_DLP_VERSION}")
     
     # 로컬 환경에서만 테마 선택 표시
     if ENV_CONFIG['environment'] == "🏠 Local Environment":
@@ -194,9 +577,11 @@ with st.sidebar:
     
     # 모델 선택 / Model Selection
     model_options = {
-        "tiny": "🚀 Tiny (매우빠름, 기본정확도) / Very Fast, Basic Accuracy",
-        "base": "⚡ Base (빠름, 좋은정확도) / Fast, Good Accuracy", 
-        "small": "🐌 Small (보통, 높은정확도) / Normal, High Accuracy"
+        "tiny": "🚀 Tiny (매우빠름, ⭐ 기본정확도) / Very Fast, Basic Accuracy",
+        "base": "⚡ Base (빠름, ⭐⭐ 좋은정확도) / Fast, Good Accuracy", 
+        "small": "🚶 Small (보통, ⭐⭐⭐ 더좋음) / Normal, Higher Accuracy",
+        "medium": "🐌 Medium (느림, ⭐⭐⭐⭐ 높음) / Slow, High Accuracy",
+        "large": "🐌🐌 Large (매우느림, ⭐⭐⭐⭐⭐ 최고) / Very Slow, Best Accuracy"
     }
     
     selected_model = st.selectbox(
@@ -212,7 +597,10 @@ with st.sidebar:
         "ko": "🇰🇷 Korean / 한국어",
         "en": "🇺🇸 English / 영어", 
         "ja": "🇯🇵 Japanese / 일본어",
-        "zh": "🇨🇳 Chinese / 중국어"
+        "zh": "🇨🇳 Chinese / 중국어",
+        "es": "🇪🇸 Spanish / 스페인어",
+        "fr": "🇫🇷 French / 프랑스어",
+        "de": "🇩🇪 German / 독일어"
     }
     
     selected_language = st.selectbox(
@@ -221,11 +609,30 @@ with st.sidebar:
         format_func=lambda x: language_options[x]
     )
     
-    # GPU 정보 표시 / GPU Information Display
+    # GPU 설정 / GPU Settings
+    st.markdown("---")
+    
+    # GPU 사용 가능 여부 표시
     if torch.cuda.is_available():
-        st.success("🚀 GPU Available")
+        gpu_available = True
+        st.success("🚀 GPU Available / GPU 사용 가능")
+        
+        # GPU 사용 여부 선택
+        use_gpu_option = st.checkbox("Use GPU / GPU 사용", value=True, 
+                                   help="Enable GPU acceleration for faster processing / GPU 가속을 통한 빠른 처리")
+        
     else:
-        st.info("💻 CPU Mode")
+        gpu_available = False
+        st.info("💻 CPU Mode Only / CPU 모드만 사용 가능")
+        st.caption("GPU가 감지되지 않았습니다 / No GPU detected")
+        use_gpu_option = False
+    
+    # GPU 설정을 세션 상태에 저장
+    if 'use_gpu_setting' not in st.session_state:
+        st.session_state.use_gpu_setting = True
+    
+    # GPU 설정 적용
+    st.session_state.use_gpu_setting = use_gpu_option if torch.cuda.is_available() else False
 
 # 메인 페이지 / Main Page
 st.title("🎬 Video to Text Converter")
@@ -237,136 +644,131 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
 else:
     st.success("🏠 **Local Production Version** - Full features with GPU acceleration up to 2GB / GPU 가속을 포함한 모든 기능, 최대 2GB 지원")
 
-# 파일 업로드 / File Upload
-uploaded_file = st.file_uploader(
-    "Choose a video or audio file / 비디오 또는 오디오 파일을 선택하세요",
-    type=['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'webm', 'mp3', 'wav', 'm4a', 'aac'],
-    help=f"Maximum file size: {ENV_CONFIG['max_file_display']} / 최대 파일 크기: {ENV_CONFIG['max_file_display']}"
-)
+# 입력 방식 선택 탭 / Input Method Selection Tabs
+tab1, tab2 = st.tabs(["📁 Upload Video File / 비디오 파일 업로드", "🎬 YouTube URL / 유튜브 링크"])
 
-if uploaded_file is not None:
-    # 파일 크기 체크
-    file_size_mb = uploaded_file.size / (1024*1024)
+with tab1:
+    # 파일 업로드 / File Upload
+    uploaded_file = st.file_uploader(
+        "Choose a video or audio file / 비디오 또는 오디오 파일을 선택하세요",
+        type=['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv', 'webm', 'mp3', 'wav', 'm4a', 'aac'],
+        help=f"Maximum file size: {ENV_CONFIG['max_file_display']} / 최대 파일 크기: {ENV_CONFIG['max_file_display']}"
+    )
     
-    if file_size_mb > ENV_CONFIG['max_file_size_mb']:
-        st.error(f"❌ File too large! Maximum size: {ENV_CONFIG['max_file_display']} / 파일이 너무 큽니다! 최대 크기: {ENV_CONFIG['max_file_display']}")
-        st.stop()
+    process_file_upload(uploaded_file, selected_model, selected_language, st.session_state.get('use_gpu_setting', False))
+
+with tab2:
+    # YouTube URL 입력 / YouTube URL Input
+    st.markdown("### 🎬 YouTube Video to Text / 유튜브 영상을 텍스트로")
     
-    # 파일 정보 표시 / Display File Info
-    col1, col2 = st.columns(2)
-    with col1:
-        file_details = {
-            "Filename": uploaded_file.name,
-            "File size": f"{file_size_mb:.1f} MB"
-        }
-        st.json(file_details)
+    # YouTube 기능 설명
+    st.info("""
+    🎬 **YouTube Video Support / YouTube 영상 지원**
     
-    with col2:
-        model_info = {
-            "Selected Model": model_options[selected_model].split(' /')[0],
-            "Language": language_options[selected_language].split(' /')[0]
-        }
-        st.json(model_info)
+    ✅ Extract text directly from YouTube videos
+    ✅ YouTube 영상에서 직접 텍스트 추출
     
-    # 변환 버튼 / Convert Button
-    if st.button("🚀 Convert to Text / 텍스트 변환", type="primary", use_container_width=True):
+    **Supported formats / 지원 형식:**
+    - Standard YouTube videos / 일반 YouTube 영상
+    - Educational content / 교육용 콘텐츠  
+    - Tutorial videos / 튜토리얼 영상
+    
+    **Tips for best results / 최상의 결과를 위한 팁:**
+    - Use public, accessible videos / 공개된, 접근 가능한 영상 사용
+    - Educational and tutorial content works best / 교육용과 튜토리얼 콘텐츠가 가장 잘 작동
+    
+    **Test URLs / 테스트 URL:**
+    - `https://www.youtube.com/watch?v=jNQXAC9IVRw` (Me at the zoo)
+    - `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (Rick Roll)
+    """)
+    
+    # 세션 상태 초기화
+    if 'youtube_validated' not in st.session_state:
+        st.session_state.youtube_validated = False
+    if 'youtube_info' not in st.session_state:
+        st.session_state.youtube_info = None
+    if 'youtube_url' not in st.session_state:
+        st.session_state.youtube_url = ""
+    
+    youtube_url = st.text_input(
+        "YouTube URL / 유튜브 링크:",
+        value=st.session_state.youtube_url,
+        placeholder="https://www.youtube.com/watch?v=...",
+        help="Enter a YouTube video URL / YouTube 비디오 URL을 입력하세요"
+    )
+    
+    # URL이 변경되면 검증 상태 리셋
+    if youtube_url != st.session_state.youtube_url:
+        st.session_state.youtube_url = youtube_url
+        st.session_state.youtube_validated = False
+        st.session_state.youtube_info = None
+    
+    if youtube_url:
+        col1, col2 = st.columns([3, 1])
         
-        # 진행률 표시 / Progress Display
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        with col2:
+            validate_clicked = st.button("🔍 Validate / 검증", use_container_width=True)
         
-        try:
-            # 임시 파일 저장 / Save Temporary File
-            status_text.text("📁 Saving uploaded file... / 업로드된 파일 저장 중...")
-            progress_bar.progress(10)
-            
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
-                tmp_file.write(uploaded_file.read())
-                temp_file_path = tmp_file.name
-            
-            # 변환기 로딩 / Load Converter
-            status_text.text(f"🤖 Loading {selected_model} model... / {selected_model} 모델 로딩 중...")
-            progress_bar.progress(30)
-            
-            use_gpu = torch.cuda.is_available()
-            converter = load_video_converter(selected_model, use_gpu)
-            
-            # 텍스트 변환 / Text Conversion
-            status_text.text("🔄 Converting speech to text... / 음성을 텍스트로 변환 중...")
-            progress_bar.progress(70)
-            
-            # 언어 설정
-            language = None if selected_language == "auto" else selected_language
-            
-            # 변환 실행
-            result = converter.process_local_video_with_info(
-                temp_file_path, 
-                language=language, 
-                save_transcript=False
-            )
-            
-            # 완료 / Complete
-            progress_bar.progress(100)
-            status_text.text("✅ Conversion completed! / 변환 완료!")
-            
-            # 결과 표시 / Display Results
-            st.success("🎉 Transcription completed successfully! / 텍스트 변환이 성공적으로 완료되었습니다!")
-            
-            # 변환된 텍스트 / Converted Text
-            st.subheader("📝 Transcribed Text / 변환된 텍스트")
-            
-            transcript_text = result.get("transcript", "").strip()
-            
-            if transcript_text:
-                # 텍스트 영역 / Text Area
-                edited_text = st.text_area(
-                    "Edit the text if needed / 필요시 텍스트를 편집하세요:",
-                    value=transcript_text,
-                    height=300,
-                    help="You can edit the transcribed text before downloading / 다운로드 전에 변환된 텍스트를 편집할 수 있습니다"
-                )
-                
-                # 통계 정보 / Statistics
-                word_count = len(edited_text.split())
-                char_count = len(edited_text)
-                detected_lang = result.get("detected_language", "unknown")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Language / 언어", detected_lang.upper())
-                with col2:
-                    st.metric("Words / 단어수", word_count)
-                with col3:
-                    st.metric("Characters / 문자수", char_count)
-                
-                # 다운로드 버튼 / Download Button
-                st.download_button(
-                    label="📥 Download Text File / 텍스트 파일 다운로드",
-                    data=edited_text,
-                    file_name=f"{uploaded_file.name.split('.')[0]}_transcript.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
+        # 검증 버튼 클릭 처리
+        if validate_clicked:
+            converter_temp = load_video_converter("base", False)
+            if converter_temp.is_youtube_url(youtube_url):
+                try:
+                    with st.spinner("Getting video info... / 영상 정보 가져오는 중..."):
+                        info = converter_temp.get_youtube_info(youtube_url)
+                    if info:
+                        # 세션 상태에 정보 저장
+                        st.session_state.youtube_validated = True
+                        st.session_state.youtube_info = info
+                        st.session_state.youtube_url = youtube_url
+                    else:
+                        st.error("❌ Failed to get video information / 영상 정보를 가져올 수 없습니다")
+                        st.session_state.youtube_validated = False
+                        st.session_state.youtube_info = None
+                except Exception as e:
+                    error_msg = str(e)
+                    st.session_state.youtube_validated = False
+                    st.session_state.youtube_info = None
+                    
+                    if "Video unavailable" in error_msg:
+                        st.error("❌ **Video unavailable** / 영상을 사용할 수 없습니다")
+                        st.info("💡 Try one of the test URLs above / 위의 테스트 URL을 시도해보세요")
+                    elif "HTTP Error 403" in error_msg:
+                        st.error("❌ **Access forbidden** / 접근이 금지되었습니다")
+                        st.info("💡 This video may be region-blocked / 이 영상은 지역 차단되었을 수 있습니다")
+                    else:
+                        st.error(f"❌ Error: {error_msg}")
+                        st.info("💡 Try a different YouTube URL / 다른 YouTube URL을 시도해보세요")
             else:
-                st.warning("⚠️ No speech detected in the file. Please check if the file contains audio. / 파일에서 음성이 감지되지 않았습니다. 파일에 오디오가 포함되어 있는지 확인해주세요.")
+                st.error("❌ Invalid YouTube URL format / 유효하지 않은 YouTube URL 형식입니다")
+                st.session_state.youtube_validated = False
+                st.session_state.youtube_info = None
+        
+        # 검증된 정보 표시
+        if st.session_state.youtube_validated and st.session_state.youtube_info:
+            info = st.session_state.youtube_info
+            duration_str = f"{int(info['duration']//60)}:{int(info['duration']%60):02d}" if info['duration'] else "Unknown"
             
-            # 임시 파일 정리 / Clean up temporary files
-            try:
-                os.unlink(temp_file_path)
-            except:
-                pass
+            st.success(f"✅ **Valid Video Found:**\n\n**Title:** {info['title']}\n\n**Duration:** {duration_str}\n\n**Uploader:** {info['uploader']}")
+            
+            # 처리 버튼 - 항상 표시
+            if st.button("🚀 **Extract Text from YouTube / 유튜브에서 텍스트 추출**", type="primary", use_container_width=True):
+                # GPU 설정 가져오기
+                current_use_gpu = st.session_state.get('use_gpu_setting', torch.cuda.is_available())
                 
-        except Exception as e:
-            st.error(f"❌ Error occurred: {str(e)} / 오류가 발생했습니다: {str(e)}")
-            progress_bar.progress(0)
-            status_text.text("❌ Conversion failed / 변환 실패")
-            
-            # 임시 파일 정리 / Clean up temporary files
-            try:
-                if 'temp_file_path' in locals():
-                    os.unlink(temp_file_path)
-            except:
-                pass
+                # 디버깅 정보 표시
+                st.info(f"🔧 Processing with: Model={selected_model}, Language={selected_language}, GPU={current_use_gpu}")
+                
+                try:
+                    process_youtube_video(st.session_state.youtube_url, selected_model, selected_language, current_use_gpu)
+                except Exception as e:
+                    st.error(f"❌ Processing failed: {str(e)}")
+                    st.exception(e)
+        
+        elif youtube_url and youtube_url.strip() and not st.session_state.youtube_validated:
+            st.info("👆 Click 'Validate' to check the YouTube URL / 'Validate' 버튼을 클릭하여 YouTube URL을 확인하세요")
+
+
 
 # 사용법 안내 / Usage Instructions
 with st.expander("📖 How to use / 사용 방법"):
