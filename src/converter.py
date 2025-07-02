@@ -67,22 +67,34 @@ class VideoToTextConverter:
             dict: 영상 정보 (title, duration, uploader)
         """
         try:
-            import yt_dlp
-            
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False,
-            }
-            
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
+            # yt-dlp 우선 시도
+            try:
+                import yt_dlp
+                
+                ydl_opts = {
+                    'quiet': True,
+                    'no_warnings': True,
+                    'extract_flat': False,
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    return {
+                        'title': info.get('title', 'Unknown'),
+                        'duration': info.get('duration', 0),
+                        'uploader': info.get('uploader', 'Unknown'),
+                        'view_count': info.get('view_count', 0),
+                        'upload_date': info.get('upload_date', 'Unknown')
+                    }
+            except ImportError:
+                # yt-dlp 없으면 기본 정보 반환 (클라우드 환경용)
+                print("yt-dlp not available, using basic info")
                 return {
-                    'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0),
-                    'uploader': info.get('uploader', 'Unknown'),
-                    'view_count': info.get('view_count', 0),
-                    'upload_date': info.get('upload_date', 'Unknown')
+                    'title': 'YouTube Video',
+                    'duration': 300,  # 5분 기본값
+                    'uploader': 'Unknown',
+                    'view_count': 0,
+                    'upload_date': 'Unknown'
                 }
         except Exception as e:
             print(f"Error getting YouTube info: {e}")
@@ -100,8 +112,13 @@ class VideoToTextConverter:
             str: 다운로드된 파일 경로
         """
         try:
-            import yt_dlp
-            import random
+            # yt-dlp 설치 확인
+            try:
+                import yt_dlp
+                import random
+            except ImportError:
+                # 클라우드 환경에서 yt-dlp 없음
+                raise Exception("YouTube download not available in cloud environment. Please use file upload instead. / 클라우드 환경에서는 YouTube 다운로드를 지원하지 않습니다. 파일 업로드를 사용해주세요.")
             
             # 임시 디렉토리 생성
             temp_dir = tempfile.mkdtemp()

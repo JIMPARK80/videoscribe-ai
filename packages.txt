@@ -5,4 +5,10 @@ libxrender-dev
 libgomp1
 libsndfile1
 libavcodec58
-libavformat58 
+libavformat58
+curl
+wget
+ca-certificates
+openssl
+python3-pip
+git 

@@ -967,9 +967,38 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
             Cloud Demo Version
         </h4>
         <p style="margin: 0; color: #6c757d; font-size: 1.1rem;">
-            For larger files (>200MB), please use the local version<br>
-            <span style="color: #999;">큰 파일(200MB 초과)은 로컬 버전을 사용하세요</span>
+            <strong>파일이 200MB보다 크신가요?</strong><br>
+            <span style="color: #999;">👇 아래 버튼으로 컴퓨터용(무제한) 버전을 받으세요!</span>
         </p>
+        <div style="margin-top: 1.5rem; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <h4 style="color: #28a745; margin: 0; font-size: 1.2rem;">
+                    🏠 컴퓨터용 버전 (무료)
+                </h4>
+                <p style="margin: 0.5rem 0; color: #6c757d; font-size: 0.9rem;">
+                    ✅ 파일 크기 무제한 &nbsp; ✅ 더 빠른 속도 &nbsp; ✅ 개인정보 안전
+                </p>
+            </div>
+            <div style="text-align: center;">
+                <a href="https://github.com/your-repo/YouTube_VideoToText/releases/latest/download/VideoToText.exe" 
+                   style="background: linear-gradient(135deg, #28a745, #20c997); 
+                          color: white; 
+                          text-decoration: none; 
+                          padding: 1rem 2rem; 
+                          border-radius: 25px; 
+                          font-weight: 700;
+                          font-size: 1.1rem;
+                          display: inline-block;
+                          margin: 0.5rem;
+                          box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                    💻 컴퓨터용 다운로드 (간단!)
+                </a>
+                <br>
+                <small style="color: #999; font-size: 0.8rem;">
+                    다운로드 후 파일을 더블클릭하면 자동 실행됩니다
+                </small>
+            </div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 else:
@@ -1009,26 +1038,59 @@ with tab2:
     # YouTube URL 입력 / YouTube URL Input
     st.markdown("### 🎬 YouTube Video to Text / 유튜브 영상을 텍스트로")
     
-    # YouTube 기능 설명
-    st.info("""
-    🎬 **YouTube Video Support / YouTube 영상 지원**
-    
-    ✅ Extract text directly from YouTube videos
-    ✅ YouTube 영상에서 직접 텍스트 추출
-    
-    **Supported formats / 지원 형식:**
-    - Standard YouTube videos / 일반 YouTube 영상
-    - Educational content / 교육용 콘텐츠  
-    - Tutorial videos / 튜토리얼 영상
-    
-    **Tips for best results / 최상의 결과를 위한 팁:**
-    - Use public, accessible videos / 공개된, 접근 가능한 영상 사용
-    - Educational and tutorial content works best / 교육용과 튜토리얼 콘텐츠가 가장 잘 작동
-    
-    **Test URLs / 테스트 URL:**
-    - `https://www.youtube.com/watch?v=jNQXAC9IVRw` (Me at the zoo)
-    - `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (Rick Roll)
-    """)
+    # 클라우드 환경에서 yt-dlp 상태 확인
+    if ENV_CONFIG['environment'] == "☁️ Cloud Environment" and YT_DLP_VERSION == "Not installed":
+        # 클라우드에서 yt-dlp 없음 - 경고 표시
+        st.error("""
+        ⚠️ **YouTube 기능 현재 불가** 
+        
+        클라우드 버전에서는 YouTube 다운로드가 제한됩니다.
+        
+        **해결 방법:**
+        1. 📁 **파일 업로드** 탭 사용 (권장)
+        2. 💻 **컴퓨터용 버전** 다운로드 (무제한 YouTube 지원)
+        """)
+        
+        # 컴퓨터용 버전 다운로드 버튼
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("""
+            <div style="text-align: center; margin: 1rem 0;">
+                <a href="https://github.com/your-repo/YouTube_VideoToText/releases/latest/download/VideoToText.exe" 
+                   style="background: linear-gradient(135deg, #28a745, #20c997); 
+                          color: white; 
+                          text-decoration: none; 
+                          padding: 1rem 2rem; 
+                          border-radius: 25px; 
+                          font-weight: 700;
+                          font-size: 1.1rem;
+                          display: inline-block;
+                          box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                    💻 컴퓨터용 다운로드 (YouTube 지원)
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        # YouTube 기능 설명 (정상 작동 시)
+        st.info(f"""
+        🎬 **YouTube Video Support / YouTube 영상 지원** (yt-dlp v{YT_DLP_VERSION})
+        
+        ✅ Extract text directly from YouTube videos
+        ✅ YouTube 영상에서 직접 텍스트 추출
+        
+        **Supported formats / 지원 형식:**
+        - Standard YouTube videos / 일반 YouTube 영상
+        - Educational content / 교육용 콘텐츠  
+        - Tutorial videos / 튜토리얼 영상
+        
+        **Tips for best results / 최상의 결과를 위한 팁:**
+        - Use public, accessible videos / 공개된, 접근 가능한 영상 사용
+        - Educational and tutorial content works best / 교육용과 튜토리얼 콘텐츠가 가장 잘 작동
+        
+        **Test URLs / 테스트 URL:**
+        - `https://www.youtube.com/watch?v=jNQXAC9IVRw` (Me at the zoo)
+        - `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (Rick Roll)
+        """)
     
     # 세션 상태 초기화
     if 'youtube_validated' not in st.session_state:
@@ -1119,25 +1181,45 @@ with tab2:
 
 
 # 사용법 안내 / Usage Instructions
-with st.expander("📖 How to use / 사용 방법"):
+with st.expander("📖 사용법이 궁금하세요? (클릭해서 보기)"):
     st.markdown(f"""
-    ### English:
-    1. **Select Model**: Choose AI model size (tiny=fastest, small=most accurate)
-    2. **Select Language**: Choose target language or use auto-detect
-    3. **Upload File**: Click "Browse files" and select your audio/video file
-    4. **Convert**: Click "Convert to Text" button and wait for processing
-    5. **Download**: Edit text if needed and download the result
+    ## 🎬 비디오를 텍스트로 바꾸는 방법 (매우 쉬움!)
     
-    ### 한국어:
-    1. **모델 선택**: AI 모델 크기 선택 (tiny=최고속도, small=최고정확도)
-    2. **언어 선택**: 대상 언어 선택 또는 자동 감지 사용
-    3. **파일 업로드**: "파일 선택" 클릭하여 오디오/비디오 파일 선택
-    4. **변환**: "텍스트 변환" 버튼 클릭 후 처리 완료까지 대기
-    5. **다운로드**: 필요시 텍스트 편집 후 결과 다운로드
+    ### 📁 방법 1: 파일 업로드
+    ```
+    1. 👆 "파일 업로드" 탭 클릭
+    2. 📁 "Browse files" 버튼 클릭 
+    3. 💾 컴퓨터에서 동영상 파일 선택
+    4. 🚀 "텍스트 변환" 버튼 클릭
+    5. ⏰ 잠깐 기다리기 (몇 분)
+    6. 📥 "다운로드" 버튼으로 텍스트 파일 저장
+    ```
     
-    **Supported formats**: MP4, AVI, MOV, MKV, FLV, WMV, WEBM, MP3, WAV, M4A, AAC
-    **Current Environment**: {ENV_CONFIG['environment']}
-    **Maximum file size**: {ENV_CONFIG['max_file_display']}
+    ### 🎬 방법 2: 유튜브 링크  
+    ```
+    1. 👆 "유튜브 링크" 탭 클릭
+    2. 🔗 유튜브 주소 복사해서 붙여넣기
+    3. 🔍 "검증" 버튼 클릭 
+    4. 🚀 "텍스트 추출" 버튼 클릭
+    5. ⏰ 잠깐 기다리기 (몇 분)
+    6. 📥 "다운로드" 버튼으로 텍스트 파일 저장
+    ```
+    
+    ## 🤔 어떤 파일이 가능한가요?
+    **동영상**: MP4, AVI, MOV, MKV 등  
+    **음성**: MP3, WAV, M4A 등  
+    **유튜브**: 모든 공개 영상
+    
+    ## ⚠️ 파일이 너무 크면?
+    - **현재 환경**: {ENV_CONFIG['environment']}
+    - **최대 크기**: {ENV_CONFIG['max_file_display']}
+    - **더 큰 파일**: 위의 "컴퓨터용 다운로드" 버튼 클릭!
+    
+    ## 💡 꿀팁
+    - **빠른 처리**: tiny 모델 선택
+    - **정확한 결과**: small 모델 선택  
+    - **언어**: 잘 모르겠으면 "자동감지" 그대로 두세요
+    - **문제 발생**: 페이지 새로고침(F5) 해보세요
     """)
 
 # 푸터 / Footer
