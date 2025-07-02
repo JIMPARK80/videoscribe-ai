@@ -538,10 +538,9 @@ class VideoToTextConverter:
                     audio.write_audiofile(temp_audio_path, verbose=False, logger=None)
                     audio.close()
                 
-                # 진행률 업데이트
+                # AI 모델 로딩 완료 - 간단한 진행률 업데이트만
                 if progress_callback:
-                    safe_local_callback(65, "Starting transcription... / 텍스트 변환 시작...", 
-                                      processing_details="Loading Whisper AI model")
+                    safe_local_callback(65, "")
                 
                 # Whisper로 텍스트 변환 (실시간 진행률 포함)
                 transcribe_options = {

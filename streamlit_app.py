@@ -135,6 +135,268 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# 전체 페이지 스타일링 / Global Page Styling
+st.markdown("""
+<style>
+/* 전체 페이지 스타일 */
+.main > div {
+    padding-top: 2rem;
+}
+
+/* 메인 컨테이너 카드 스타일 */
+.main .block-container {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* 제목 스타일 */
+h1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    font-size: 3rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 1rem !important;
+    text-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* 부제목 스타일 */
+h3 {
+    text-align: center;
+    color: #6c757d;
+    font-weight: 400;
+    margin-bottom: 2rem !important;
+}
+
+/* 탭 스타일 개선 */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 20px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 15px;
+    padding: 8px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    padding: 12px 24px;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+    box-shadow: 0 4px 15px rgba(255,107,107,0.4);
+}
+
+/* 버튼 스타일 개선 */
+.stButton > button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stButton > button:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+}
+
+.stButton > button:active {
+    transform: translateY(-1px);
+}
+
+/* Primary 버튼 특별 스타일 */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+    box-shadow: 0 4px 15px rgba(255,107,107,0.3);
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #ffa500 0%, #ff6b6b 100%);
+    box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+}
+
+/* 파일 업로더 스타일 */
+.stFileUploader > div {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border: 2px dashed #667eea;
+    border-radius: 15px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stFileUploader > div:hover {
+    border-color: #ff6b6b;
+    background: linear-gradient(135deg, rgba(255,107,107,0.1) 0%, rgba(255,165,0,0.05) 100%);
+}
+
+/* 텍스트 입력 스타일 */
+.stTextInput > div > div > input {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 0 3px rgba(255,107,107,0.2);
+}
+
+/* 선택 박스 스타일 */
+.stSelectbox > div > div > div {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+/* 메트릭 카드 스타일 */
+.metric-container {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* 정보 박스 스타일 */
+.stInfo {
+    background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.05) 100%);
+    border-left: 4px solid #667eea;
+    border-radius: 12px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+.stSuccess {
+    background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(40,167,69,0.05) 100%);
+    border-left: 4px solid #28a745;
+    border-radius: 12px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+.stError {
+    background: linear-gradient(135deg, rgba(220,53,69,0.1) 0%, rgba(220,53,69,0.05) 100%);
+    border-left: 4px solid #dc3545;
+    border-radius: 12px;
+    padding: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+/* 사이드바 스타일 */
+.css-1d391kg {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255,255,255,0.2);
+}
+
+/* 확장 가능한 섹션 스타일 */
+.streamlit-expanderHeader {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 12px;
+    padding: 1rem;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+}
+
+.streamlit-expanderHeader:hover {
+    background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.05) 100%);
+    border-color: #667eea;
+}
+
+/* 체크박스 스타일 */
+.stCheckbox > label {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.stCheckbox > label:hover {
+    background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.05) 100%);
+    border-color: #667eea;
+}
+
+/* 애니메이션 효과 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.main > div {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* 텍스트 영역 스타일 */
+.stTextArea > div > div > textarea {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    padding: 1rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    transition: all 0.3s ease;
+}
+
+.stTextArea > div > div > textarea:focus {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 0 3px rgba(255,107,107,0.2);
+}
+
+/* 다운로드 버튼 특별 스타일 */
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+    transition: all 0.3s ease;
+}
+
+.stDownloadButton > button:hover {
+    background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(40,167,69,0.4);
+}
+</style>
+""", unsafe_allow_html=True)
+
 # GPU 사용 가능 여부 확인 / Check GPU availability
 use_gpu = torch.cuda.is_available()
 
@@ -190,73 +452,54 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
         # 변환 버튼 / Convert Button
         if st.button("🚀 Convert to Text / 텍스트 변환", type="primary", use_container_width=True):
             
-            # 간단한 진행률 컨테이너
+            # 간단한 퍼센트 표시만
             progress_container = st.container()
             
             with progress_container:
-                # 큰 진행률 바와 퍼센트 표시
-                st.markdown("""
-                <style>
-                .stProgress > div > div > div > div {
-                    height: 2rem !important;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    progress_bar = st.progress(0)
-                with col2:
-                    progress_percent = st.empty()
+                # 퍼센트 표시만
+                progress_percent = st.empty()
                 
                 # 상태 텍스트와 단계별 진행 표시
                 status_text = st.empty()
                 progress_steps = st.empty()
             
-            def update_progress_gui_style(value, step_message, status_message=""):
-                """간단한 GUI 스타일 진행률 업데이트 (파일 업로드용)"""
-                progress_bar.progress(value)
+            def update_progress_gui_style(value, step_message=""):
+                """간단한 퍼센트만 표시 (파일 업로드용)"""
                 progress_percent.text(f"{value}%")
-                if status_message:
-                    status_text.text(status_message)
                 if step_message:
                     progress_steps.markdown(f"**• {step_message}**")
+                else:
+                    status_text.text("")  # 기존 상태 메시지 지우기
             
             try:
                 # Step 1/6: 파일 정보 읽기 (5%)
-                update_progress_gui_style(5,
-                    "📹 Step 1/6: Reading video information / 영상 정보 읽는중...",
-                    "📁 Saving uploaded file... / 업로드된 파일 저장 중...")
+                update_progress_gui_style(5, "📹 Step 1/6: Reading video information / 영상 정보 읽는중...")
                 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
                     tmp_file.write(uploaded_file.read())
                     temp_file_path = tmp_file.name
                 
                 # Step 1/6: 완료 (10%)
-                update_progress_gui_style(10,
-                    "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
+                update_progress_gui_style(10, "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
                 
                 # Step 2/6: AI 모델 로딩 (15%)
-                update_progress_gui_style(15,
-                    "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...",
-                    f"🤖 Loading {selected_model} model... / {selected_model} 모델 로딩 중...")
+                update_progress_gui_style(15, "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...")
                 
                 use_gpu = torch.cuda.is_available()
                 converter = load_video_converter(selected_model, use_gpu)
                 
                 # Step 2/6: 완료 (25%)
-                update_progress_gui_style(25,
-                    "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
+                update_progress_gui_style(25, "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
                 
                 # Step 3/6: 오디오 추출 준비 (30%)
-                update_progress_gui_style(30,
-                    "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
+                update_progress_gui_style(30, "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
                 
                 # 언어 설정
                 language = None if selected_language == "auto" else selected_language
                 
                 # 간단한 GUI 스타일 진행률 콜백 함수 (파일 업로드용)
-                def progress_callback(value, message, download_details="", processing_details="", tech_details=""):
+                def progress_callback(value, message="", **kwargs):
+                    # 복잡한 기술 정보는 무시하고 단계별 메시지만 표시
                     if value >= 40 and value < 60:
                         step_msg = "🎵 Step 4/6: Extracting audio from video / 비디오에서 오디오 추출중..."
                     elif value == 60:
@@ -270,7 +513,8 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
                     else:
                         step_msg = ""
                     
-                    update_progress_gui_style(min(value, 95), step_msg, message)
+                    # 간단한 진행률만 표시 (기술적 세부사항은 무시)
+                    update_progress_gui_style(min(value, 95), step_msg)
                 
                 # 변환 실행
                 result = converter.process_local_video_with_info(
@@ -281,9 +525,7 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
                 )
                 
                 # Step 6/6: 완료 (100%)
-                update_progress_gui_style(100,
-                    "🎉 Step 6/6: All completed! / 모든 단계 완료!",
-                    "✅ Conversion completed! / 변환 완료!")
+                update_progress_gui_style(100, "🎉 Step 6/6: All completed! / 모든 단계 완료!")
                 
                 # 결과 표시
                 st.success("🎉 Transcription completed successfully! / 텍스트 변환이 성공적으로 완료되었습니다!")
@@ -334,8 +576,7 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
                     
             except Exception as e:
                 st.error(f"❌ Error occurred: {str(e)} / 오류가 발생했습니다: {str(e)}")
-                progress_bar.progress(0)
-                status_text.text("❌ Conversion failed / 변환 실패")
+                update_progress_gui_style(0, "❌ Conversion failed / 변환 실패")
                 
                 # 임시 파일 정리 / Clean up temporary files
                 try:
@@ -348,44 +589,29 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
 def process_youtube_video(youtube_url, model_size, language, use_gpu):
     """YouTube 비디오를 처리하고 결과를 표시합니다 (간단한 진행률 표시)"""
     
-    # 간단한 진행률 컨테이너
+    # 간단한 퍼센트 표시만
     progress_container = st.container()
     
     with progress_container:
-        # 큰 진행률 바와 퍼센트 표시
-        st.markdown("""
-        <style>
-        .stProgress > div > div > div > div {
-            height: 2rem !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            progress_bar = st.progress(0)
-        with col2:
-            progress_percent = st.empty()
+        # 퍼센트 표시만
+        progress_percent = st.empty()
         
         # 상태 텍스트와 단계별 진행 표시
         status_text = st.empty()
         progress_steps = st.empty()
     
-    def update_progress_gui_style(value, step_message, status_message=""):
-        """간단한 GUI 스타일 진행률 업데이트"""
-        progress_bar.progress(value)
+    def update_progress_gui_style(value, step_message=""):
+        """간단한 퍼센트만 표시"""
         progress_percent.text(f"{value}%")
         
-        if status_message:
-            status_text.text(status_message)
         if step_message:
             progress_steps.markdown(f"**• {step_message}**")
+        else:
+            status_text.text("")  # 기존 상태 메시지 지우기
     
     try:
         # Step 1/6: 초기화 (5%)
-        update_progress_gui_style(5, 
-            "📹 Step 1/6: Reading video information / 영상 정보 읽는중...",
-            "🔍 Validating YouTube URL... / YouTube URL 검증 중...")
+        update_progress_gui_style(5, "📹 Step 1/6: Reading video information / 영상 정보 읽는중...")
         
         # 변환기 로딩
         converter = load_video_converter(model_size, use_gpu)
@@ -396,13 +622,10 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
             return
         
         # Step 1/6: 완료 (10%)
-        update_progress_gui_style(10, 
-            "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
+        update_progress_gui_style(10, "✅ Step 1/6: Video info loaded / 영상 정보 로딩 완료")
         
         # Step 2/6: AI 모델 로딩 (15%)
-        update_progress_gui_style(15,
-            "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...",
-            f"🤖 Loading {model_size} model... / {model_size} 모델 로딩 중...")
+        update_progress_gui_style(15, "🤖 Step 2/6: Loading AI model / AI 모델 로딩중...")
         
         # YouTube 정보 가져오기
         youtube_info = converter.get_youtube_info(youtube_url)
@@ -411,8 +634,7 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
             return
         
         # Step 2/6: 완료 (25%)
-        update_progress_gui_style(25,
-            "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
+        update_progress_gui_style(25, "✅ Step 2/6: AI model loaded / AI 모델 로딩 완료")
         
         # 영상 정보 표시 (GUI와 동일한 형식)
         with st.expander("📺 YouTube Video Information / 유튜브 영상 정보", expanded=True):
@@ -434,15 +656,14 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
                 st.write(f"**Views / 조회수:** {youtube_info.get('view_count', 'Unknown'):,}" if isinstance(youtube_info.get('view_count'), int) else f"**Views / 조회수:** Unknown")
         
         # Step 3/6: 오디오 추출 준비 (30%)
-        update_progress_gui_style(30,
-            "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
+        update_progress_gui_style(30, "⚙️ Step 3/6: Preparing audio extraction / 오디오 추출 준비중...")
         
         # 언어 설정
         lang = None if language == "auto" else language
         
         # 간단한 GUI 스타일 진행률 콜백 함수 (YouTube용)
-        def progress_callback(value, message, download_details="", processing_details="", tech_details=""):
-            # 단계별 메시지 결정
+        def progress_callback(value, message="", **kwargs):
+            # 복잡한 기술 정보는 무시하고 단계별 메시지만 표시
             if value >= 10 and value < 50:
                 step_msg = "📥 Step 4/6: Downloading video / 비디오 다운로드중..."
             elif value == 50:
@@ -458,8 +679,8 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
             else:
                 step_msg = ""
             
-            # 간단한 UI 업데이트
-            update_progress_gui_style(min(value, 95), step_msg, message)
+            # 간단한 진행률만 표시 (기술적 세부사항은 무시)
+            update_progress_gui_style(min(value, 95), step_msg)
         
         # YouTube 비디오 처리
         result = converter.process_youtube_video(
@@ -470,9 +691,7 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
         )
         
         # Step 6/6: 완료 (100%)
-        update_progress_gui_style(100,
-            "🎉 Step 6/6: All completed! / 모든 단계 완료!",
-            "✅ Conversion completed! / 변환 완료!")
+        update_progress_gui_style(100, "🎉 Step 6/6: All completed! / 모든 단계 완료!")
         
         # 결과 표시
         st.success("🎉 YouTube transcription completed successfully! / YouTube 텍스트 변환이 성공적으로 완료되었습니다!")
@@ -530,19 +749,78 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
         
         # 진행률 리셋
         try:
-            progress_bar.progress(0)
-            status_text.text("❌ Conversion failed / 변환 실패")
+            update_progress_gui_style(0, "❌ Conversion failed / 변환 실패")
         except:
             pass
 
 # 사이드바 설정 / Sidebar Configuration  
 with st.sidebar:
-    st.title("⚙️ Settings / 설정")
+    # 사이드바 헤더
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h2 style="background: linear-gradient(135deg, #667eea, #764ba2); 
+                   -webkit-background-clip: text; 
+                   -webkit-text-fill-color: transparent; 
+                   background-clip: text; 
+                   font-size: 2rem; 
+                   font-weight: 700; 
+                   margin: 0;">
+            ⚙️ Settings
+        </h2>
+        <p style="color: #6c757d; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+            Customize your experience / 설정 조정
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # 환경 정보 표시
-    st.info(f"🌍 Environment: {ENV_CONFIG['environment']}")
-    st.info(f"📁 Max File Size: {ENV_CONFIG['max_file_display']}")
-    st.info(f"📹 yt-dlp Version: {YT_DLP_VERSION}")
+    # 환경 정보 카드들
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.05)); 
+                border-radius: 12px; 
+                padding: 1rem; 
+                margin-bottom: 1rem; 
+                border: 1px solid rgba(102,126,234,0.2);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h4 style="color: #667eea; margin: 0 0 0.5rem 0; font-size: 0.9rem; display: flex; align-items: center;">
+            <span style="margin-right: 0.5rem;">🌍</span> Environment
+        </h4>
+        <p style="margin: 0; color: #6c757d; font-size: 0.8rem;">
+            {ENV_CONFIG['environment']}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(255,165,0,0.05)); 
+                border-radius: 12px; 
+                padding: 1rem; 
+                margin-bottom: 1rem; 
+                border: 1px solid rgba(255,107,107,0.2);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h4 style="color: #ff6b6b; margin: 0 0 0.5rem 0; font-size: 0.9rem; display: flex; align-items: center;">
+            <span style="margin-right: 0.5rem;">📁</span> Max File Size
+        </h4>
+        <p style="margin: 0; color: #6c757d; font-size: 0.8rem;">
+            {ENV_CONFIG['max_file_display']}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.05)); 
+                border-radius: 12px; 
+                padding: 1rem; 
+                margin-bottom: 1.5rem; 
+                border: 1px solid rgba(40,167,69,0.2);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h4 style="color: #28a745; margin: 0 0 0.5rem 0; font-size: 0.9rem; display: flex; align-items: center;">
+            <span style="margin-right: 0.5rem;">📹</span> yt-dlp Version
+        </h4>
+        <p style="margin: 0; color: #6c757d; font-size: 0.8rem;">
+            {YT_DLP_VERSION}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 로컬 환경에서만 테마 선택 표시
     if ENV_CONFIG['environment'] == "🏠 Local Environment":
@@ -651,15 +929,68 @@ with st.sidebar:
     # GPU 설정 적용
     st.session_state.use_gpu_setting = use_gpu_option if torch.cuda.is_available() else False
 
-# 메인 페이지 / Main Page
-st.title("🎬 Video to Text Converter")
-st.markdown("### AI-powered video transcription service / AI 기반 비디오 텍스트 변환 서비스")
+# 메인 페이지 헤더 / Main Page Header
+st.markdown("""
+<div style="text-align: center; margin-bottom: 3rem;">
+    <h1 style="font-size: 4rem; margin-bottom: 0.5rem;">
+        🎬 Video to Text Converter
+    </h1>
+    <p style="font-size: 1.3rem; color: #6c757d; margin-bottom: 2rem; font-weight: 300;">
+        ✨ AI-powered video transcription service / AI 기반 비디오 텍스트 변환 서비스 ✨
+    </p>
+    <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;">
+        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 15px rgba(102,126,234,0.3);">
+            🚀 Fast Processing
+        </div>
+        <div style="background: linear-gradient(135deg, #ff6b6b, #ffa500); color: white; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 15px rgba(255,107,107,0.3);">
+            🎯 High Accuracy  
+        </div>
+        <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 0.5rem 1.5rem; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+            🆓 Free Service
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# 환경별 안내 메시지
+# 환경별 안내 메시지 카드
 if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
-    st.info("☁️ **Cloud Demo Version** - For larger files (>200MB), please use the local version / 큰 파일(200MB 초과)은 로컬 버전을 사용하세요")
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.05)); 
+                border-left: 5px solid #667eea; 
+                border-radius: 15px; 
+                padding: 1.5rem; 
+                margin: 2rem 0; 
+                box-shadow: 0 4px 15px rgba(102,126,234,0.1);
+                backdrop-filter: blur(10px);">
+        <h4 style="color: #667eea; margin: 0 0 0.5rem 0; display: flex; align-items: center;">
+            <span style="font-size: 1.5rem; margin-right: 0.5rem;">☁️</span>
+            Cloud Demo Version
+        </h4>
+        <p style="margin: 0; color: #6c757d; font-size: 1.1rem;">
+            For larger files (>200MB), please use the local version<br>
+            <span style="color: #999;">큰 파일(200MB 초과)은 로컬 버전을 사용하세요</span>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 else:
-    st.success("🏠 **Local Production Version** - Full features with GPU acceleration up to 2GB / GPU 가속을 포함한 모든 기능, 최대 2GB 지원")
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(40,167,69,0.05)); 
+                border-left: 5px solid #28a745; 
+                border-radius: 15px; 
+                padding: 1.5rem; 
+                margin: 2rem 0; 
+                box-shadow: 0 4px 15px rgba(40,167,69,0.1);
+                backdrop-filter: blur(10px);">
+        <h4 style="color: #28a745; margin: 0 0 0.5rem 0; display: flex; align-items: center;">
+            <span style="font-size: 1.5rem; margin-right: 0.5rem;">🏠</span>
+            Local Production Version
+        </h4>
+        <p style="margin: 0; color: #6c757d; font-size: 1.1rem;">
+            Full features with GPU acceleration up to 2GB<br>
+            <span style="color: #999;">GPU 가속을 포함한 모든 기능, 최대 2GB 지원</span>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # 입력 방식 선택 탭 / Input Method Selection Tabs
 tab1, tab2 = st.tabs(["📁 Upload Video File / 비디오 파일 업로드", "🎬 YouTube URL / 유튜브 링크"])
@@ -773,8 +1104,8 @@ with tab2:
                 # GPU 설정 가져오기
                 current_use_gpu = st.session_state.get('use_gpu_setting', torch.cuda.is_available())
                 
-                # 디버깅 정보 표시
-                st.info(f"🔧 Processing with: Model={selected_model}, Language={selected_language}, GPU={current_use_gpu}")
+                # 디버깅 정보 표시 (숨김)
+                # st.info(f"🔧 Processing with: Model={selected_model}, Language={selected_language}, GPU={current_use_gpu}")
                 
                 try:
                     process_youtube_video(st.session_state.youtube_url, selected_model, selected_language, current_use_gpu)
@@ -811,12 +1142,25 @@ with st.expander("📖 How to use / 사용 방법"):
 
 # 푸터 / Footer
 st.markdown("---")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("**🤖 Powered by**")
+    st.caption("OpenAI Whisper & Streamlit")
+
+with col2:
+    st.markdown("**🎬 Video to Text Converter**")
+    st.caption("v1.0 - Free Service")
+
+with col3:
+    st.markdown(f"**🌐 Environment**")
+    st.caption(f"{ENV_CONFIG['environment']} - {ENV_CONFIG['max_file_display']}")
+
 st.markdown(
-    f"""
-    <div style='text-align: center'>
-        <p>🎬 Video to Text Converter v1.0 | Powered by OpenAI Whisper & Streamlit</p>
-        <p>💡 Free service for everyone! / 모두를 위한 무료 서비스!</p>
-        <p><small>{ENV_CONFIG['environment']} - Max File: {ENV_CONFIG['max_file_display']}</small></p>
+    """
+    <div style='text-align: center; margin-top: 2rem; color: #6c757d;'>
+        Made with ❤️ for seamless video transcription experience<br>
+        <small>원활한 비디오 텍스트 변환 경험을 위해 제작되었습니다</small>
     </div>
     """, 
     unsafe_allow_html=True
