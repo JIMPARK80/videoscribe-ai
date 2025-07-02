@@ -156,25 +156,115 @@ class VideoToTextConverter:
             }
             
             if progress_callback:
-                progress_callback(10, "Starting download... / 다운로드 시작...")
+                # 안전한 progress_callback 래퍼 생성
+                def safe_progress_callback(value, message, **kwargs):
+                    try:
+                        # 함수 시그니처 확인
+                        import inspect
+                        sig = inspect.signature(progress_callback)
+                        param_count = len(sig.parameters)
+                        
+                        if param_count >= 5:  # 새로운 파라미터를 받을 수 있는 경우
+                            progress_callback(
+                                value, 
+                                message,
+                                download_details=kwargs.get('download_details', ''),
+                                processing_details=kwargs.get('processing_details', ''),
+                                tech_details=kwargs.get('tech_details', '')
+                            )
+                        elif param_count >= 3:  # 기본 파라미터만 받는 경우
+                            progress_callback(value, message, kwargs.get('download_details', ''))
+                        else:  # 기존 방식 (2개 파라미터)
+                            progress_callback(value, message)
+                    except Exception as e:
+                        print(f"Progress callback error: {e}")
+                        # 기본 방식으로 폴백
+                        try:
+                            progress_callback(value, message)
+                        except:
+                            pass
+                
+                safe_progress_callback(10, "Starting download... / 다운로드 시작...")
                 
                 def progress_hook(d):
                     try:
                         if d['status'] == 'downloading':
+                            # 상세한 다운로드 정보 수집
+                            download_info = {}
+                            
                             if 'total_bytes' in d and d['total_bytes']:
-                                percent = (d['downloaded_bytes'] / d['total_bytes']) * 40
-                                progress_callback(10 + percent, f"Downloading: {percent:.1f}% / 다운로드 중: {percent:.1f}%")
+                                downloaded = d['downloaded_bytes']
+                                total = d['total_bytes']
+                                percent = (downloaded / total) * 40
+                                
+                                # 파일 크기 포맷팅
+                                def format_bytes(bytes_val):
+                                    for unit in ['B', 'KB', 'MB', 'GB']:
+                                        if bytes_val < 1024:
+                                            return f"{bytes_val:.1f}{unit}"
+                                        bytes_val /= 1024
+                                    return f"{bytes_val:.1f}TB"
+                                
+                                download_info['size'] = f"{format_bytes(downloaded)}/{format_bytes(total)}"
+                                download_info['percent'] = f"{(downloaded/total)*100:.1f}%"
+                                
+                                # 다운로드 속도
+                                if 'speed' in d and d['speed']:
+                                    speed = format_bytes(d['speed']) + "/s"
+                                    download_info['speed'] = speed
+                                
+                                # ETA 계산
+                                if 'eta' in d and d['eta']:
+                                    eta_seconds = d['eta']
+                                    if eta_seconds < 60:
+                                        eta_str = f"{eta_seconds:.0f}s"
+                                    else:
+                                        minutes = eta_seconds // 60
+                                        seconds = eta_seconds % 60
+                                        eta_str = f"{minutes:.0f}m{seconds:.0f}s"
+                                    download_info['eta'] = eta_str
+                                
+                                # 상세 정보가 있는 progress_callback 호출
+                                status_msg = f"Downloading: {download_info['percent']}"
+                                if 'speed' in download_info:
+                                    status_msg += f" at {download_info['speed']}"
+                                if 'eta' in download_info:
+                                    status_msg += f" ETA {download_info['eta']}"
+                                
+                                safe_progress_callback(
+                                    10 + percent, 
+                                    status_msg + " / 다운로드 중",
+                                    download_details=f"{download_info['size']} ({download_info.get('speed', 'N/A')}, ETA: {download_info.get('eta', 'N/A')})",
+                                    tech_details=f"Downloaded: {format_bytes(downloaded)}, Speed: {download_info.get('speed', 'Unknown')}"
+                                )
+                                
                             elif '_percent_str' in d:
                                 percent_str = d['_percent_str'].strip('%')
                                 try:
                                     percent = float(percent_str) * 0.4
-                                    progress_callback(10 + percent, f"Downloading: {percent_str}% / 다운로드 중: {percent_str}%")
+                                    safe_progress_callback(
+                                        10 + percent, 
+                                        f"Downloading: {percent_str}% / 다운로드 중: {percent_str}%",
+                                        download_details=f"Progress: {percent_str}%"
+                                    )
                                 except:
-                                    progress_callback(25, "Downloading... / 다운로드 중...")
+                                    safe_progress_callback(25, "Downloading... / 다운로드 중...")
                         elif d['status'] == 'finished':
-                            progress_callback(50, "Download completed! / 다운로드 완료!")
+                            filename = d.get('filename', 'video')
+                            safe_progress_callback(
+                                50, 
+                                "Download completed! / 다운로드 완료!",
+                                download_details=f"File saved: {os.path.basename(filename)}",
+                                processing_details="Preparing for text extraction / 텍스트 추출 준비"
+                            )
                     except Exception as e:
                         print(f"Progress callback error: {e}")
+                        # 에러 발생 시 기본 메시지
+                        if hasattr(progress_callback, '__call__'):
+                            try:
+                                safe_progress_callback(25, f"Downloading... / 다운로드 중... (Error: {str(e)})")
+                            except:
+                                pass
                 
                 ydl_opts['progress_hooks'] = [progress_hook]
             
@@ -312,21 +402,44 @@ class VideoToTextConverter:
                 raise ValueError("Invalid YouTube URL / 유효하지 않은 YouTube URL입니다")
             
             if progress_callback:
-                progress_callback(5, "Validating URL... / URL 검증 중...")
+                # 안전한 progress_callback 래퍼
+                def safe_callback(value, message, **kwargs):
+                    try:
+                        import inspect
+                        sig = inspect.signature(progress_callback)
+                        param_count = len(sig.parameters)
+                        
+                        if param_count >= 5:
+                            progress_callback(value, message, 
+                                            download_details=kwargs.get('download_details', ''),
+                                            processing_details=kwargs.get('processing_details', ''),
+                                            tech_details=kwargs.get('tech_details', ''))
+                        elif param_count >= 3:
+                            progress_callback(value, message, kwargs.get('download_details', ''))
+                        else:
+                            progress_callback(value, message)
+                    except:
+                        try:
+                            progress_callback(value, message)
+                        except:
+                            pass
+                
+                safe_callback(5, "Validating URL... / URL 검증 중...")
             
             # YouTube 정보 가져오기
             youtube_info = self.get_youtube_info(url)
             if not youtube_info:
                 raise Exception("Failed to get YouTube video info / YouTube 영상 정보를 가져올 수 없습니다")
             
-            # 영상 다운로드
-            downloaded_file = self.download_youtube_video(url, progress_callback)
+            # 영상 다운로드 (safe_callback 전달)
+            downloaded_file = self.download_youtube_video(url, safe_callback)
             
             if progress_callback:
-                progress_callback(55, "Processing downloaded video... / 다운로드된 영상 처리 중...")
+                safe_callback(55, "Processing downloaded video... / 다운로드된 영상 처리 중...", 
+                            processing_details="Preparing for audio extraction / 오디오 추출 준비")
             
-            # 다운로드된 파일을 로컬 비디오 처리 메서드로 처리
-            result = self.process_local_video_with_info(downloaded_file, language, save_transcript, progress_callback)
+            # 다운로드된 파일을 로컬 비디오 처리 메서드로 처리 (safe_callback 전달)
+            result = self.process_local_video_with_info(downloaded_file, language, save_transcript, safe_callback)
             
             # YouTube 정보 추가
             result['youtube_info'] = youtube_info
@@ -388,7 +501,30 @@ class VideoToTextConverter:
             
             # 진행률 업데이트
             if progress_callback:
-                progress_callback(60, "Extracting audio... / 오디오 추출 중...")
+                # 안전한 progress_callback 래퍼
+                def safe_local_callback(value, message, **kwargs):
+                    try:
+                        import inspect
+                        sig = inspect.signature(progress_callback)
+                        param_count = len(sig.parameters)
+                        
+                        if param_count >= 5:
+                            progress_callback(value, message, 
+                                            download_details=kwargs.get('download_details', ''),
+                                            processing_details=kwargs.get('processing_details', ''),
+                                            tech_details=kwargs.get('tech_details', ''))
+                        elif param_count >= 3:
+                            progress_callback(value, message, kwargs.get('processing_details', ''))
+                        else:
+                            progress_callback(value, message)
+                    except:
+                        try:
+                            progress_callback(value, message)
+                        except:
+                            pass
+                
+                safe_local_callback(60, "Extracting audio... / 오디오 추출 중...", 
+                                  processing_details="Using MoviePy for audio extraction")
             
             # MoviePy를 사용하여 오디오 추출
             from moviepy.editor import VideoFileClip
@@ -404,22 +540,165 @@ class VideoToTextConverter:
                 
                 # 진행률 업데이트
                 if progress_callback:
-                    progress_callback(65, "Starting transcription... / 텍스트 변환 시작...")
+                    safe_local_callback(65, "Starting transcription... / 텍스트 변환 시작...", 
+                                      processing_details="Loading Whisper AI model")
                 
-                # Whisper로 텍스트 변환
+                # Whisper로 텍스트 변환 (실시간 진행률 포함)
                 transcribe_options = {
                     "task": "transcribe",
-                    "verbose": False
+                    "verbose": True,  # 진행률 표시 활성화
+                    "fp16": False  # 안정성 개선
                 }
                 
                 if language:
                     transcribe_options["language"] = language
                 
-                result = model.transcribe(temp_audio_path, **transcribe_options)
+                # 실시간 진행률 모니터링을 위한 래퍼
+                import sys
+                import io
+                from contextlib import redirect_stdout, redirect_stderr
+                
+                # 고급 진행률 캡처용 클래스
+                class ProgressCapture:
+                    def __init__(self, callback=None):
+                        self.callback = callback
+                        self.buffer = ""
+                        self.last_progress = 65
+                        self.start_time = None
+                        import time
+                        self.start_time = time.time()
+                        
+                    def write(self, text):
+                        if text and text.strip():
+                            self.buffer += text
+                            
+                            if self.callback:
+                                import re
+                                import time
+                                
+                                # 1. 기본 진행률 패턴 (예: "45%|████")
+                                progress_match = re.search(r'(\d+)%', text)
+                                if progress_match:
+                                    percent = int(progress_match.group(1))
+                                    # 65%에서 85% 사이로 매핑
+                                    mapped_percent = 65 + (percent * 0.2)
+                                    self.last_progress = mapped_percent
+                                    
+                                    # 상태 메시지 기본값
+                                    status_msg = f"AI processing: {percent}% / AI 처리중: {percent}%"
+                                    processing_details = f"Whisper AI: {percent}%"
+                                    tech_details = f"Progress: {percent}/100"
+                                    
+                                    self.callback(mapped_percent, status_msg, processing_details=processing_details, tech_details=tech_details)
+                                
+                                # 2. 상세 시간/프레임 정보 패턴 (예: "[00:45<00:30, 2954.12frames/s]")
+                                time_pattern = r'\[(\d{2}:\d{2})<(\d{2}:\d{2}),\s*([\d.]+)frames/s\]'
+                                time_match = re.search(time_pattern, text)
+                                if time_match:
+                                    elapsed_time = time_match.group(1)  # 00:45
+                                    remaining_time = time_match.group(2)  # 00:30
+                                    frame_rate = float(time_match.group(3))  # 2954.12
+                                    
+                                    # 시간 기반 진행률 계산
+                                    def parse_time(time_str):
+                                        minutes, seconds = map(int, time_str.split(':'))
+                                        return minutes * 60 + seconds
+                                    
+                                    elapsed_seconds = parse_time(elapsed_time)
+                                    remaining_seconds = parse_time(remaining_time)
+                                    
+                                    if elapsed_seconds + remaining_seconds > 0:
+                                        time_progress = elapsed_seconds / (elapsed_seconds + remaining_seconds)
+                                        # 65%~85% 범위로 매핑
+                                        mapped_percent = 65 + (time_progress * 20)
+                                        self.last_progress = mapped_percent
+                                        
+                                        # 상세 정보 구성
+                                        status_msg = f"AI processing: {time_progress*100:.1f}% / AI 처리중: {time_progress*100:.1f}%"
+                                        processing_details = f"Time: {elapsed_time} elapsed, {remaining_time} remaining"
+                                        tech_details = f"Speed: {frame_rate:.1f} frames/s, Total time: {elapsed_seconds + remaining_seconds}s"
+                                        
+                                        self.callback(mapped_percent, status_msg, processing_details=processing_details, tech_details=tech_details)
+                                
+                                # 3. 완료 상태 감지 (예: "[01:23<00:00, 2954.12frames/s]")
+                                completed_pattern = r'\[(\d{2}:\d{2})<00:00,\s*([\d.]+)frames/s\]'
+                                completed_match = re.search(completed_pattern, text)
+                                if completed_match:
+                                    total_time = completed_match.group(1)
+                                    final_frame_rate = float(completed_match.group(2))
+                                    
+                                    # 거의 완료 상태로 설정
+                                    self.last_progress = 84
+                                    status_msg = "AI processing: 99% (finalizing) / AI 처리: 99% (마무리중)"
+                                    processing_details = f"Completed in {total_time}, finalizing results"
+                                    tech_details = f"Final speed: {final_frame_rate:.1f} frames/s"
+                                    
+                                    self.callback(84, status_msg, processing_details=processing_details, tech_details=tech_details)
+                                
+                                # 4. 언어 감지 정보
+                                if 'Detected language:' in text:
+                                    lang_match = re.search(r'Detected language:\s*(\w+)', text)
+                                    if lang_match:
+                                        detected_lang = lang_match.group(1)
+                                        status_msg = f"Language detected: {detected_lang} / 언어 감지: {detected_lang}"
+                                        processing_details = f"Language: {detected_lang}"
+                                        tech_details = f"Language detection completed: {detected_lang}"
+                                        
+                                        self.callback(self.last_progress, status_msg, processing_details=processing_details, tech_details=tech_details)
+                                
+                                # 5. 성공/완료 메시지
+                                if 'Success with strategy' in text:
+                                    strategy_match = re.search(r'Success with strategy (\d+)', text)
+                                    if strategy_match:
+                                        strategy_num = strategy_match.group(1)
+                                        status_msg = f"Download successful with strategy {strategy_num} / 전략 {strategy_num}로 다운로드 성공"
+                                        processing_details = f"Download strategy {strategy_num} worked"
+                                        tech_details = f"Used download strategy: {strategy_num}"
+                                        
+                                        # 현재 진행률 유지하면서 메시지만 업데이트
+                                        self.callback(self.last_progress, status_msg, processing_details=processing_details, tech_details=tech_details)
+                                
+                                # 6. 전체 처리 시간 계산 및 표시
+                                current_time = time.time()
+                                if self.start_time:
+                                    elapsed_total = current_time - self.start_time
+                                    minutes = int(elapsed_total // 60)
+                                    seconds = int(elapsed_total % 60)
+                                    
+                                    # 긴 처리에 대한 사용자 피드백
+                                    if elapsed_total > 30:  # 30초 이상 처리 시
+                                        if hasattr(self, '_last_time_update') and current_time - self._last_time_update < 5:
+                                            pass  # 5초마다 업데이트
+                                        else:
+                                            self._last_time_update = current_time
+                                            tech_details = f"Total processing time: {minutes}m {seconds}s"
+                                            
+                        sys.__stdout__.write(text)
+                        
+                    def flush(self):
+                        sys.__stdout__.flush()
+                
+                # 안전한 progress_callback을 ProgressCapture에 전달 (safe_local_callback을 사용)
+                
+                # 진행률 캡처 설정 (safe_local_callback 사용)
+                progress_capture = ProgressCapture(safe_local_callback)
+                
+                try:
+                    # stdout 리다이렉트하여 Whisper 출력 캡처
+                    with redirect_stdout(progress_capture):
+                        result = model.transcribe(temp_audio_path, **transcribe_options)
+                except Exception as e:
+                    # 리다이렉트 실패 시 기본 방식으로 처리
+                    print(f"Progress capture failed, using default method: {e}")
+                    transcribe_options["verbose"] = False  # 에러 방지
+                    result = model.transcribe(temp_audio_path, **transcribe_options)
                 
                 # 진행률 업데이트
                 if progress_callback:
-                    progress_callback(85, "Transcription completed! / 텍스트 변환 완료!")
+                    detected_lang = result.get("language", "unknown")
+                    safe_local_callback(85, f"Transcription completed! Language: {detected_lang} / 텍스트 변환 완료! 언어: {detected_lang}", 
+                                      processing_details=f"Final result: {detected_lang}", 
+                                      tech_details="Transcription 100% complete")
                 
                 # 결과 반환
                 transcript_result = {

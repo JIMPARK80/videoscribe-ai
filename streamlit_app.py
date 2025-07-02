@@ -190,11 +190,19 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
         # 변환 버튼 / Convert Button
         if st.button("🚀 Convert to Text / 텍스트 변환", type="primary", use_container_width=True):
             
-            # GUI 스타일 진행률 컨테이너
+            # 간단한 진행률 컨테이너
             progress_container = st.container()
             
             with progress_container:
-                # 진행률 바와 퍼센트 표시
+                # 큰 진행률 바와 퍼센트 표시
+                st.markdown("""
+                <style>
+                .stProgress > div > div > div > div {
+                    height: 2rem !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
                 col1, col2 = st.columns([4, 1])
                 with col1:
                     progress_bar = st.progress(0)
@@ -206,7 +214,7 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
                 progress_steps = st.empty()
             
             def update_progress_gui_style(value, step_message, status_message=""):
-                """GUI 스타일 진행률 업데이트"""
+                """간단한 GUI 스타일 진행률 업데이트 (파일 업로드용)"""
                 progress_bar.progress(value)
                 progress_percent.text(f"{value}%")
                 if status_message:
@@ -247,8 +255,8 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
                 # 언어 설정
                 language = None if selected_language == "auto" else selected_language
                 
-                # GUI 스타일 진행률 콜백 함수
-                def progress_callback(value, message):
+                # 간단한 GUI 스타일 진행률 콜백 함수 (파일 업로드용)
+                def progress_callback(value, message, download_details="", processing_details="", tech_details=""):
                     if value >= 40 and value < 60:
                         step_msg = "🎵 Step 4/6: Extracting audio from video / 비디오에서 오디오 추출중..."
                     elif value == 60:
@@ -338,13 +346,21 @@ def process_file_upload(uploaded_file, selected_model, selected_language, use_gp
 
 # YouTube 비디오 처리 함수 / YouTube Video Processing Function
 def process_youtube_video(youtube_url, model_size, language, use_gpu):
-    """YouTube 비디오를 처리하고 결과를 표시합니다 (GUI 스타일 진행률 포함)"""
+    """YouTube 비디오를 처리하고 결과를 표시합니다 (간단한 진행률 표시)"""
     
-    # GUI 스타일 진행률 컨테이너
+    # 간단한 진행률 컨테이너
     progress_container = st.container()
     
     with progress_container:
-        # 진행률 바와 퍼센트 표시
+        # 큰 진행률 바와 퍼센트 표시
+        st.markdown("""
+        <style>
+        .stProgress > div > div > div > div {
+            height: 2rem !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
         col1, col2 = st.columns([4, 1])
         with col1:
             progress_bar = st.progress(0)
@@ -356,9 +372,10 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
         progress_steps = st.empty()
     
     def update_progress_gui_style(value, step_message, status_message=""):
-        """GUI 스타일 진행률 업데이트"""
+        """간단한 GUI 스타일 진행률 업데이트"""
         progress_bar.progress(value)
         progress_percent.text(f"{value}%")
+        
         if status_message:
             status_text.text(status_message)
         if step_message:
@@ -423,21 +440,25 @@ def process_youtube_video(youtube_url, model_size, language, use_gpu):
         # 언어 설정
         lang = None if language == "auto" else language
         
-        # GUI 스타일 진행률 콜백 함수
-        def progress_callback(value, message):
-            if value >= 40 and value < 60:
-                step_msg = "🎵 Step 4/6: Extracting audio from video / 비디오에서 오디오 추출중..."
-            elif value == 60:
-                step_msg = "✅ Step 4/6: Audio extraction completed / 오디오 추출 완료"
+        # 간단한 GUI 스타일 진행률 콜백 함수 (YouTube용)
+        def progress_callback(value, message, download_details="", processing_details="", tech_details=""):
+            # 단계별 메시지 결정
+            if value >= 10 and value < 50:
+                step_msg = "📥 Step 4/6: Downloading video / 비디오 다운로드중..."
+            elif value == 50:
+                step_msg = "✅ Step 4/6: Download completed / 다운로드 완료"
+            elif value >= 55 and value < 65:
+                step_msg = "🎵 Step 5/6: Extracting audio / 오디오 추출중..."
             elif value >= 65 and value < 85:
-                step_msg = "🔄 Step 5/6: Starting AI transcription / AI 텍스트 변환 시작..."
+                step_msg = "🤖 Step 6/6: AI transcription in progress / AI 텍스트 변환 진행중..."
             elif value == 85:
-                step_msg = "✅ Step 5/6: Transcription completed / 텍스트 변환 완료"
+                step_msg = "✅ Step 6/6: Transcription completed / 텍스트 변환 완료"
             elif value >= 90:
-                step_msg = "📝 Step 6/6: Finalizing results / 결과 정리중..."
+                step_msg = "📝 Finalizing results / 결과 정리중..."
             else:
                 step_msg = ""
             
+            # 간단한 UI 업데이트
             update_progress_gui_style(min(value, 95), step_msg, message)
         
         # YouTube 비디오 처리
@@ -542,38 +563,34 @@ with st.sidebar:
             options=list(theme_options.keys()),
             format_func=lambda x: theme_options[x],
             index=list(theme_options.keys()).index(st.session_state.current_theme) if st.session_state.current_theme in theme_options else 0,
-            help="Select theme and click apply / 테마를 선택하고 적용 버튼을 클릭하세요"
+            help="Theme will be applied automatically / 테마가 자동으로 적용됩니다"
         )
         
-        # 현재 테마와 다른 경우에만 버튼 표시
+        # 테마가 변경되면 자동으로 적용
         if selected_theme != st.session_state.current_theme:
-            if st.button("🔄 Apply Theme / 테마 적용", 
-                        type="primary",
-                        help="Apply selected theme immediately / 선택한 테마를 즉시 적용"):
-                # 테마 적용 및 즉시 새로고침
-                if update_theme_config(selected_theme):
-                    st.session_state.current_theme = selected_theme
-                    st.success(f"✅ Theme applied! Refreshing... / 테마 적용 완료! 새로고침 중...")
-                    
-                    # 즉시 재실행
+            # 테마 적용
+            if update_theme_config(selected_theme):
+                st.session_state.current_theme = selected_theme
+                st.success(f"✅ Theme applied: {theme_options[selected_theme].split(' /')[0]} / 테마 적용됨")
+                
+                # 효과 추가
+                st.balloons()
+                
+                # 즉시 새로고침 (Streamlit 내장 기능 사용)
+                try:
+                    st.rerun()
+                except (AttributeError, NameError):
                     try:
-                        st.rerun()
+                        st.experimental_rerun()
                     except (AttributeError, NameError):
-                        try:
-                            st.experimental_rerun()
-                        except (AttributeError, NameError):
-                            # 최후 수단: JavaScript 새로고침 + 효과
-                            st.balloons()
-                            st.markdown("""
-                            <script>
-                            setTimeout(() => {
-                                window.parent.location.reload();
-                            }, 1000);
-                            </script>
-                            """, unsafe_allow_html=True)
+                        # 최후 수단: 페이지 새로고침
+                        st.markdown("""
+                        <script>
+                        window.parent.location.reload();
+                        </script>
+                        """, unsafe_allow_html=True)
         else:
-            st.success(f"✅ Current theme: {theme_options[st.session_state.current_theme]}")
-            st.info("💡 Select a different theme to apply changes / 다른 테마를 선택하여 변경하세요")
+            st.success(f"✅ Current theme: {theme_options[st.session_state.current_theme].split(' /')[0]}")
     
     # 모델 선택 / Model Selection
     model_options = {
