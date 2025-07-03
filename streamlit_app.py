@@ -9,20 +9,9 @@ import whisper
 from src.ffmpeg_setup import setup_ffmpeg_path
 from src.converter import VideoToTextConverter
 
-# FFmpeg 경로 설정 실행
-setup_ffmpeg_path()
-
-# yt-dlp 버전 확인을 위한 임포트
-try:
-    import yt_dlp
-    YT_DLP_VERSION = yt_dlp.version.__version__
-except ImportError:
-    YT_DLP_VERSION = "Not installed"
-
-# 환경 감지 / Environment Detection
-def get_environment_config():
-    """환경에 따른 설정 반환 / Return config based on environment"""
-    # 다양한 클라우드 환경 감지 방법
+# 환경 감지 헬퍼 함수 / Environment Detection Helper
+def is_cloud_environment():
+    """클라우드 환경인지 확인 / Check if running in cloud environment"""
     cloud_indicators = [
         os.getenv('STREAMLIT_SHARING_MODE'),  # Streamlit Cloud
         'streamlit.app' in os.getenv('SERVER_NAME', ''),  # Streamlit Cloud
@@ -33,8 +22,36 @@ def get_environment_config():
         os.path.exists('/app'),  # Docker container
         not os.path.exists('D:\\'),  # Windows 로컬 드라이브 없음
     ]
-    
-    if any(cloud_indicators):
+    return any(cloud_indicators)
+
+# FFmpeg 경로 설정 실행 (클라우드 환경에서는 스킵)
+def setup_ffmpeg_safely():
+    """FFmpeg를 안전하게 설정 / Setup FFmpeg safely"""
+    try:
+        if not is_cloud_environment():
+            setup_ffmpeg_path()
+        else:
+            # 클라우드 환경에서는 시스템 FFmpeg 사용
+            pass
+    except Exception as e:
+        # FFmpeg 설정 실패 시 조용히 넘어감
+        print(f"FFmpeg setup skipped: {e}")
+
+# FFmpeg 설정 실행
+setup_ffmpeg_safely()
+
+# yt-dlp 버전 확인을 위한 임포트
+try:
+    import yt_dlp
+    YT_DLP_VERSION = yt_dlp.version.__version__
+except (ImportError, AttributeError) as e:
+    YT_DLP_VERSION = "Not installed"
+    print(f"yt-dlp not available: {e}")
+
+# 환경 감지 / Environment Detection
+def get_environment_config():
+    """환경에 따른 설정 반환 / Return config based on environment"""
+    if is_cloud_environment():
         return {
             "max_file_size_mb": 200,
             "max_file_display": "200MB",
@@ -403,7 +420,18 @@ use_gpu = torch.cuda.is_available()
 # 캐시된 변환기 로딩 / Load Cached Converter
 @st.cache_resource
 def load_video_converter(model_name, use_gpu=True):
-    return VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
+    """비디오 변환기 로딩 (오류 처리 강화)"""
+    try:
+        # 클라우드 환경에서는 GPU 사용 안함
+        if is_cloud_environment():
+            use_gpu = False
+        
+        converter = VideoToTextConverter(model_size=model_name, use_gpu=use_gpu)
+        return converter
+    except Exception as e:
+        st.error(f"❌ Failed to load AI model: {str(e)} / AI 모델 로딩 실패: {str(e)}")
+        st.info("💡 Try using a smaller model (tiny/base) or refresh the page / 더 작은 모델을 사용하거나 페이지를 새로고침해보세요")
+        st.stop()
 
 # 파일 업로드 처리 함수 / File Upload Processing Function
 def process_file_upload(uploaded_file, selected_model, selected_language, use_gpu):
