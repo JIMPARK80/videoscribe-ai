@@ -106,7 +106,6 @@ If you encounter any issues:
 
 - **OpenAI Whisper**: For the amazing speech recognition model
 - **Streamlit**: For the web application framework
-- **Hugging Face**: For the free hosting platform
 
 ## 📄 License
 
