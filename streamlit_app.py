@@ -1008,19 +1008,61 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
                 </p>
             </div>
             <div style="text-align: center;">
-                <a href="https://github.com/your-repo/YouTube_VideoToText/releases/latest/download/VideoToText.exe" 
-                   style="background: linear-gradient(135deg, #28a745, #20c997); 
-                          color: white; 
-                          text-decoration: none; 
-                          padding: 1rem 2rem; 
-                          border-radius: 25px; 
-                          font-weight: 700;
-                          font-size: 1.1rem;
-                          display: inline-block;
-                          margin: 0.5rem;
-                          box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
-                    💻 컴퓨터용 다운로드 (간단!)
-                </a>
+                <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.05)); 
+                            border-radius: 15px; 
+                            padding: 1.5rem; 
+                            margin: 1rem 0;
+                            border-left: 4px solid #28a745;">
+                    <h4 style="color: #28a745; margin: 0 0 1rem 0;">💻 컴퓨터용 다운로드 (3개 파일)</h4>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #6c757d;">
+                        ⚠️ 3개 파일을 모두 같은 폴더에 다운로드하세요
+                    </p>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 1/3 (.zip)
+                        </a>
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 2/3 (.z01)
+                        </a>
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 3/3 (.z02)
+                        </a>
+                    </div>
+                    <p style="margin: 1rem 0 0 0; font-size: 0.8rem; color: #999;">
+                        💡 WinRAR/7-Zip으로 .zip 파일 압축 해제 → 자동으로 3개 파일 합쳐짐
+                    </p>
+                </div>
+            </div>
                 <br>
                 <small style="color: #999; font-size: 0.8rem;">
                     다운로드 후 파일을 더블클릭하면 자동 실행됩니다
@@ -1084,18 +1126,59 @@ with tab2:
         with col2:
             st.markdown("""
             <div style="text-align: center; margin: 1rem 0;">
-                <a href="https://github.com/your-repo/YouTube_VideoToText/releases/latest/download/VideoToText.exe" 
-                   style="background: linear-gradient(135deg, #28a745, #20c997); 
-                          color: white; 
-                          text-decoration: none; 
-                          padding: 1rem 2rem; 
-                          border-radius: 25px; 
-                          font-weight: 700;
-                          font-size: 1.1rem;
-                          display: inline-block;
-                          box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
-                    💻 컴퓨터용 다운로드 (YouTube 지원)
-                </a>
+                <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.05)); 
+                            border-radius: 15px; 
+                            padding: 1.5rem;
+                            border-left: 4px solid #28a745;">
+                    <h4 style="color: #28a745; margin: 0 0 1rem 0;">💻 컴퓨터용 다운로드 (YouTube 지원)</h4>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: #6c757d;">
+                        ⚠️ 3개 파일을 모두 같은 폴더에 다운로드하세요
+                    </p>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 1/3 (.zip)
+                        </a>
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 2/3 (.z01)
+                        </a>
+                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
+                           style="background: linear-gradient(135deg, #28a745, #20c997); 
+                                  color: white; 
+                                  text-decoration: none; 
+                                  padding: 0.8rem 1.5rem; 
+                                  border-radius: 20px; 
+                                  font-weight: 600;
+                                  font-size: 0.9rem;
+                                  display: inline-block;
+                                  margin: 0.2rem;
+                                  box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                            📦 파일 3/3 (.z02)
+                        </a>
+                    </div>
+                    <p style="margin: 1rem 0 0 0; font-size: 0.8rem; color: #999;">
+                        💡 WinRAR/7-Zip으로 .zip 파일 압축 해제 → 자동으로 3개 파일 합쳐짐
+                    </p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -1117,7 +1200,7 @@ with tab2:
         
         **Test URLs / 테스트 URL:**
         - `https://www.youtube.com/watch?v=jNQXAC9IVRw` (Me at the zoo)
-        - `https://www.youtube.com/watch?v=dQw4w9WgXcQ` (Rick Roll)
+       
         """)
     
     # 세션 상태 초기화
