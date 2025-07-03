@@ -1008,7 +1008,7 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
                 </p>
             </div>
             <div style="text-align: center;">
-                <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.05)); 
+                                    <div style="background: linear-gradient(135deg, rgba(40,167,69,0.1), rgba(32,201,151,0.05)); 
                             border-radius: 15px; 
                             padding: 1.5rem; 
                             margin: 1rem 0;
@@ -1018,7 +1018,7 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
                         ⚠️ 3개 파일을 모두 같은 폴더에 다운로드하세요
                     </p>
                     <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
@@ -1031,7 +1031,7 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
                                   box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
                             📦 파일 1/3 (.zip)
                         </a>
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
@@ -1044,7 +1044,7 @@ if ENV_CONFIG['environment'] == "☁️ Cloud Environment":
                                   box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
                             📦 파일 2/3 (.z01)
                         </a>
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
@@ -1135,7 +1135,7 @@ with tab2:
                         ⚠️ 3개 파일을 모두 같은 폴더에 다운로드하세요
                     </p>
                     <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.zip" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
@@ -1148,7 +1148,7 @@ with tab2:
                                   box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
                             📦 파일 1/3 (.zip)
                         </a>
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.z01" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
@@ -1161,7 +1161,7 @@ with tab2:
                                   box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
                             📦 파일 2/3 (.z01)
                         </a>
-                        <a href="https://github.com/JIMPARK80/YouTube_VideoToText/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
+                        <a href="https://github.com/JIMPARK80/videoscribe-ai/releases/download/v1.0.0/VideoToTextConverter.2.z02" 
                            style="background: linear-gradient(135deg, #28a745, #20c997); 
                                   color: white; 
                                   text-decoration: none; 
